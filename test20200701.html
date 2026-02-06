@@ -1,0 +1,183 @@
+<body>
+
+
+
+
+
+    <div id="ruleWrapper">
+        <div id="ruletitle" class="ruletitle"><h2 >Rule:</h2></div>
+        <div class="container"  id="ruleAuthorContent">  <!-- Class information, may not be needed  -->
+          <input class="btn btn-danger saver" type="Button" onclick= "lockAll()" id="preventRuleAllChanges" value="">            
+          <input class="btn btn-warning" type="Button" onclick= "unlockAll()"  id="allowRuleAllChanges"value="">  
+          <input type="checkbox" value="false" id="makeRuleCopy" class="hidealways hidealways2" >
+          <div class="row">
+            <div class="bg-white text-primary questionQuestionID col-3 mt-1">
+                <input type="checkbox" class="checkboxNoChange hidealways2" disabled="true">&nbspAUTHOR:
+            </div>
+            <div id="ruleAuthor" class="center questionQuestionContent required missing col-2 m-1"  contenteditable="true" onfocus ="focusFormattingRuleAuthor()" onblur="trimCapNoFormattingRuleAuthor()"></div>  
+            </div>
+        <div class="row">
+          <div class="bg-white text-primary  col-3 mt-1 questionQuestionID"><input type="checkbox" class="checkboxNoChange hidealways2" disabled="true">&nbsp ID:</div>
+          <div id="ruleID" class="center col-2 m-1 questionQuestionContent required missing"  contenteditable="true" onfocus ="focusFormattingRuleID()" onblur="trimCapNoFormattingRuleID()"></div>
+        </div>
+        <div class="row">
+          <div class="bg-white text-primary  col-3 mt-1 questionQuestionID"><input type="checkbox" class="checkboxNoChange hidealways2" disabled="true">&nbspFormattable Title:</div>
+          <div id="questionContent" class="center col-8 mt-1 questionQuestionContent required missing"  contenteditable="true"  onblur="trimCapNoFormattingRule()"></div>
+        </div>
+      </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   <h2 id="questiontitle" class="questiontitle">Question: </h2>
+    <div class="container"  id="questionAuthorContent">
+        If<input type="checkbox" disabled="true" checked="true"> (checked), no changes on the line.
+        <input type="checkbox" disabled="true"> (uncheck) to allow changes. <input class="btn btn-danger saver" type="Button" onclick= "lockAll()" value='Prevent All Changes'>
+        <input class="btn btn-warning" type="Button" onclick= "unlockAll()" value='Allow all changes other than Author, ID or Formattable Content'>
+        <input type="checkbox" value="false" id="makeCopy" > Allow Changes to Author, ID or Formattable Content
+        <div class="row">
+            <div class="bg-white text-primary col-3 mt-1">
+                <input type="checkbox" class="checkboxNoChange" disabled="true">&nbspAUTHOR:
+            </div>
+            <div id="questionAuthor" class="center questionQuestionContent required missing col-2 m-1"  contenteditable="true" onfocus ="focusFormattingAuthor()" onblur="trimCapNoFormattingAuthor()"></div>
+        </div>
+        <div class="row">
+            <div class="bg-white text-primary  col-3 mt-1">
+                <input type="checkbox" class="checkboxNoChange" disabled="true">&nbsp ID:
+            </div>
+            <div id="questionID" class="center col-2 m-1 questionQuestionContent required missing"  contenteditable="true" onfocus ="focusFormattingID()" onblur="trimCapNoFormattingID()"></div>
+        </div>
+        <div class="row">
+            <div class="bg-white text-primary  col-3 mt-1">
+                <input type="checkbox" class="checkboxNoChange" disabled="true">&nbspFormattable Content:
+            </div>
+            <div id="questionContent" class="center col-8 mt-1 questionQuestionContent required missing"  contenteditable="true"  onblur="trimCapNoFormatting()"></div>
+        </div>
+        <div class="container">
+            <br><h5 class="bg-white text-primary">Type of Question:</h5>
+            <div  id ="questionTypeDiv" class="missing" >
+                <div class="btn-group btn-group-toggle" data-toggle="buttons">
+                    <div class="col-12">
+                        <p id = "allChoiceTypes" >
+                            <div><b>Multiple Choice:</b> (retains all choices, if any, listed below)<br>
+                                <label class="btn btn-outline-secondary" for="questionTypeDiv_radio">
+                                    <input type="radio" id="questionTypeDiv_radio" name="questionTypeDiv" class="questionTypeDivList" value="questionTypeDiv_radio" onclick="trueTypeQuestion('questionTypeDivList')">&nbsp Radio Button- used for short lists, generally less than 5 choices (&#128280;)
+                                </label>
+                                <br>
+                                <label class="btn btn-outline-secondary" for="questionTypeDiv_modal">
+                                    <input type="radio" id="questionTypeDiv_modal" name="questionTypeDiv" class="questionTypeDivList" value="questionTypeDiv_modal" onclick="trueTypeQuestion('questionTypeDivList')">&nbsp Modal - used for long and filtered lists
+                                </label>
+                                <br>
+                                <label class="btn btn-outline-secondary" for="questionTypeDiv_dropdown">
+                                    <input type="radio" id="questionTypeDiv_dropdown" name="questionTypeDiv" class="questionTypeDivList" value="questionTypeDiv_dropdown" onclick="trueTypeQuestion('questionTypeDivList')">&nbsp Drop Down - used for short lists, generally less than 20 choices
+                                </label>
+                            </div>
+                            <b>Other:</b> (clears all choices, if any, listed below) <br>
+                            <label class="btn btn-outline-secondary" for="questionTypeDiv_checkbox">
+                                <input type="radio" id="questionTypeDiv_checkbox" name="questionTypeDiv"            class="questionTypeDivList" value="questionTypeDiv_checkbox" onclick="trueTypeQuestion('questionTypeDivList')">&nbsp Check Box<br>(&#9745;)
+                            </label>
+                            <label class="btn btn-outline-secondary" for="questionTypeDiv_date">
+                                <input type="radio" id="questionTypeDiv_date" name="questionTypeDiv" class="questionTypeDivList" value="questionTypeDiv_date" onclick="trueTypeQuestion('questionTypeDivList')" >&nbsp Calendar / date<br>(&#128197;)
+                            </label>
+                            <label class="btn btn-outline-secondary" for="questionTypeDiv_datetime-local">
+                                <input type="radio" id="questionTypeDiv_datetime-local" name="questionTypeDiv" class="questionTypeDivList" value="questionTypeDiv_datetime-local" onclick="trueTypeQuestion('questionTypeDivList')" >&nbsp Local Time<br>(&#x1F550;)
+                            </label>
+                            <label class="btn btn-outline-secondary" for="questionTypeDiv_email">
+                                <input type="radio" id="questionTypeDiv_email" name="questionTypeDiv" class="questionTypeDivList" value="questionTypeDiv_email" onclick="trueTypeQuestion('questionTypeDivList')">&nbsp Email<br>(<b>@</b>&#9993;)
+                            </label>
+                            <label class="btn btn-outline-secondary" for="questionTypeDiv_file">
+                                <input type="radio" id="questionTypeDiv_file" name="questionTypeDiv" class="questionTypeDivList" value="questionTypeDiv_file" onclick="trueTypeQuestion('questionTypeDivList')">&nbsp File (browse to choose a file)
+                            </label>
+                            <label class="btn btn-outline-secondary" for="questionTypeDiv_month">
+                                <input type="radio" id="questionTypeDiv_month" name="questionTypeDiv" class="questionTypeDivList" value="questionTypeDiv_month" onclick="trueTypeQuestion('questionTypeDivList')" >&nbsp Month and Year
+                            </label>
+                            <label class="btn btn-outline-secondary" for="questionTypeDiv_number">
+                                <input type="radio" id="questionTypeDiv_number" name="questionTypeDiv" class="questionTypeDivList" value="questionTypeDiv_number" onclick="trueTypeQuestion('questionTypeDivList')">&nbsp Number
+                            </label>
+                            <label class="btn btn-outline-secondary" for="questionTypeDiv_password">
+                                <input type="radio" id="questionTypeDiv_password" name="questionTypeDiv" class="questionTypeDivList" value="questionTypeDiv_password" onclick="trueTypeQuestion('questionTypeDivList')">&nbsp Password
+                            </label>
+                            <label class="btn btn-outline-secondary" for="questionTypeDiv_tel">
+                                <input type="radio" id="questionTypeDiv_tel" name="questionTypeDiv" class="questionTypeDivList" value="questionTypeDiv_tel" onclick="trueTypeQuestion('questionTypeDivList')">&nbsp Telephone<br>(&#128222;)
+                            </label>
+                            <label class="btn btn-outline-secondary" for="questionTypeDiv_text">
+                                <input type="radio" id="questionTypeDiv_text" name="questionTypeDiv" class="questionTypeDivList" value="questionTypeDiv_text" onclick="trueTypeQuestion('questionTypeDivList')">&nbsp Text
+                            </label>
+                            <label class="btn btn-outline-secondary" for="questionTypeDiv_url">
+                                <input type="radio" id="questionTypeDiv_url" name="questionTypeDiv" class="questionTypeDivList" value="questionTypeDiv_url" onclick="trueTypeQuestion('questionTypeDivList')">&nbsp url
+                            </label>
+                            <label class="btn btn-outline-secondary" for="questionTypeDiv_week">
+                                <input type="radio" id="questionTypeDiv_week" name="questionTypeDiv" class="questionTypeDivList" value="questionTypeDiv_week" onclick="trueTypeQuestion('questionTypeDivList')">&nbsp week
+                            </label>
+                            <label class="btn btn-outline-secondary" for="questionTypeDiv_na">
+                                <input type="radio" id="questionTypeDiv_na" name="questionTypeDiv" class="questionTypeDivList" value="questionTypeDiv_na" onclick="trueTypeQuestion('questionTypeDivList')">&nbsp Not Applicable, Used for information purposes
+                            </label>
+                            <label class="btn btn-outline-secondary" for="questionTypeDiv_naExplained">
+                                <input type="radio" id="questionTypeDiv_naExplained" name="questionTypeDiv" class="questionTypeDivList" value="questionTypeDiv_naExplained" onclick="trueTypeQuestion('questionTypeDivList')">&nbsp Not Applicable, Used for requesting an explanation only
+                            </label>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <h5 class="bg-white text-primary"><br> Unanswered Questions:</h5>
+            </div>
+            <div class="row">
+                <div class="bg-white text-primary  col-6 mt-1">
+                    <input type="checkbox" class="checkboxNoChange" disabled="true">&nbsp&nbsp&nbsp&nbsp&nbspIf Unanswered Question to be considered complete, check:&nbsp
+                    <input type="checkbox" id="questionUnansweredComplete" >
+                </div>
+            </div>
+            <div class="row">
+                <div class="bg-white text-primary  col-6 mt-1 questionQuestionID">
+                    <input type="checkbox" class="checkboxNoChange" disabled="true">&nbsp&nbsp&nbsp&nbsp&nbspIf Unanswered Question requires explanation, check: &nbsp
+                    <input type="checkbox" id="questionUnansweredRequiresExplanation" >
+                </div>
+            </div>
+            <div class="row">
+                &nbsp &nbsp &nbsp &nbsp Formattable  - Format / remove format of selected text with [Ctrl] key and u - underline;  b - bold; i - italic
+            </div>
+        </div>
+        <div class="container saver">
+            <div id = "questionAnswerChoicesHeader" class="row">
+                <div class="text-primary col-3">
+                    Position *** Number<br>&nbsp a) unique and numeric; <br>&nbsp b) negative and/or decimal point
+                </div>
+                <div class="questionAnswerTitle col-3 text-primary">Formattable Choice Description </div>
+            </div>
+            <ul id="questionAnswerChoices">
+                <hr>
+                <div class="row rowChoice">
+                    <div  class="col-2 numerical-input m-1 p-1" >
+                        <input type="number" class = "questionAnswerSort missing border-primary">
+                    </div>
+                    <div class="questionAnswerDescription missing col-4 p-2" contenteditable="true"></div>
+                    <div class="questionExplanationRequireYesNo col-4 p-3 border border-warning" >
+                        <input type="checkbox" class="checkboxExplain"> Require explanation
+                        <input type="button" value="Insert Copy" class="copyBtn"><br>
+                        <input type="checkbox" class="checkboxNoChange"> Prevent Changes For This Row
+                        <input type="button" value="Delete" class="deleteBtn">
+                    </div>
+                    <hr>
+                </div>
+            </ul>
+        </div>
+    </div>
+</body>
+  
+

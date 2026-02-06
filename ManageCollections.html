@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Rule Collections</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="design_system.css">
+    <link rel="stylesheet" href="modern_styles.css">
+    
+    <!-- jQuery -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/7.22.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.22.1/firebase-firestore.js"></script>
+
+    <!-- IndexedDB Setup -->
+    <script src="setupIndexedDB.js"></script>
+    <script src="GenerateRule.js"></script>
+    
+    <style>
+        .page-header {
+            background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+            color: white;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border-radius: 8px;
+        }
+        .collection-card {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border-left: 4px solid #ffc107;
+        }
+        .collection-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transform: translateY(-2px);
+        }
+        .collection-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .collection-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #333;
+        }
+        .collection-meta {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+        .collection-content {
+            color: #444;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        .logic-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-right: 0.5rem;
+        }
+        .logic-all { background: #d4edda; color: #155724; }
+        .logic-any { background: #d1ecf1; color: #0c5460; }
+        .logic-count { background: #fff3cd; color: #856404; }
+        .logic-percent { background: #f8d7da; color: #721c24; }
+        .rules-list {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+        }
+        .rule-item {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem;
+            margin: 0.25rem 0;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        .rule-item-icon {
+            margin-right: 0.5rem;
+            color: #007bff;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .badge-type {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background: #fff3cd;
+            color: #856404;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin: 2rem 0;
+        }
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+        .filter-bar {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .nav-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .stats-bar {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .stat-box {
+            flex: 1;
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #ffc107;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        .hidealways {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 2rem;">
+        
+        <a href="ManageRules.html" class="nav-back btn btn-outline-secondary">
+            ← Back to All Rules
+        </a>
+
+        <div class="page-header">
+            <h1 style="margin: 0 0 0.5rem 0;">📦 Manage Rule Collections</h1>
+            <p style="margin: 0; opacity: 0.9;">View and manage your rule collections with flexible evaluation logic</p>
+            <div id="debugInfo" style="margin-top: 1rem; padding: 0.75rem; background: #f8f9fa; border-radius: 4px; font-size: 0.85rem; font-family: monospace; color: #666;">
+                Loading database...
+            </div>
+        </div>
+
+        <div class="stats-bar">
+            <div class="stat-box">
+                <div class="stat-number" id="totalCollections">0</div>
+                <div class="stat-label">Total Collections</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="allLogicCount">0</div>
+                <div class="stat-label">ALL Logic</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="anyLogicCount">0</div>
+                <div class="stat-label">ANY Logic</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="countLogicCount">0</div>
+                <div class="stat-label">COUNT Logic</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="percentLogicCount">0</div>
+                <div class="stat-label">PERCENT Logic</div>
+            </div>
+        </div>
+
+        <div class="filter-bar">
+            <div class="row">
+                <div class="col-12">
+                    <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 250px;">
+                            <input type="text" id="searchInput" class="form-control" placeholder="🔍 Search by Author, ID, or Title..." oninput="filterCollections()">
+                            <small id="searchStatus" style="color: #666; display: block; margin-top: 0.25rem;">Ready to search...</small>
+                        </div>
+                        <div>
+                            <select id="logicFilter" class="form-control" onchange="filterCollections()" style="min-width: 200px;">
+                                <option value="all">All Logic Types</option>
+                                <option value="all">ALL (AND)</option>
+                                <option value="any">ANY (OR)</option>
+                                <option value="count">COUNT</option>
+                                <option value="percent">PERCENT</option>
+                            </select>
+                        </div>
+                        <div>
+                            <button class="btn btn-primary" onclick="refreshList()">🔄 Refresh</button>
+                            <button class="btn btn-success" onclick="createNewCollection()">➕ New Collection</button>
+                            <button class="btn btn-info" onclick="checkDatabase()">🔍 Check Database</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+            <button class="btn btn-warning" onclick="createNewCollection()" style="flex: 1;">
+                ➕ Create New Collection
+            </button>
+            <button class="btn btn-outline-secondary" onclick="window.location.href='ManageAuthors.html'" style="flex: 1;">
+                👤 Manage Authors
+            </button>
+        </div>
+
+        <div id="collectionsContainer">
+            <!-- Collections will be loaded here -->
+        </div>
+
+        <div id="emptyState" class="empty-state hidealways">
+            <div class="empty-state-icon">📦</div>
+            <h3>No Collections Found</h3>
+            <p style="color: #666; margin: 1rem 0;">Create your first rule collection to get started!</p>
+            <div style="margin-top: 2rem;">
+                <button class="btn btn-warning" onclick="createNewCollection()">Create Collection</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let allCollections = [];
+
+        // Load collections on page load
+        window.addEventListener('DOMContentLoaded', async function() {
+            console.log("=== ManageCollections.html Page Loaded ===");
+            console.log("Current time:", new Date().toLocaleString());
+            
+            // Wait for setupIndexedDB.js to initialize database
+            console.log("Waiting 500ms for database initialization...");
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            console.log("Starting to load collections...");
+            loadCollections();
+        });
+
+        async function loadCollections() {
+            try {
+                console.log("=== LOADING COLLECTIONS ===");
+                console.log("Opening database 'authorExcuTrust'...");
+                const database = "authorExcuTrust";
+                const databaseOpenRequest = indexedDB.open(database);
+                
+                databaseOpenRequest.onsuccess = () => {
+                    const db = databaseOpenRequest.result;
+                    console.log("✓ Database opened successfully");
+                    console.log("  - Database name:", db.name);
+                    console.log("  - Database version:", db.version);
+                    console.log("  - Available stores:", Array.from(db.objectStoreNames));
+                    
+                    // Check if ruleStore exists
+                    if (!db.objectStoreNames.contains('ruleStore')) {
+                        console.error("❌ ruleStore does not exist in database!");
+                        showEmptyState("Database not properly initialized. Please refresh the page.");
+                        db.close();
+                        return;
+                    }
+                    
+                    console.log("Opening transaction on ruleStore...");
+                    const tx = db.transaction("ruleStore", "readonly");
+                    const store = tx.objectStore("ruleStore");
+                    
+                    console.log("Executing getAll() on ruleStore...");
+                    const getAllRequest = store.getAll();
+                    
+                    getAllRequest.onsuccess = () => {
+                        const allRules = getAllRequest.result || [];
+                        console.log(`✓ Loaded ${allRules.length} total records from database`);
+                        
+                        // Log sample of each type
+                        const displayRules = allRules.filter(r => r.keyPathValue && r.keyPathValue[0] === 'trueruleStore');
+                        const collections = allRules.filter(r => r.keyPathValue && r.keyPathValue[0] === 'groupruleStore');
+                        console.log(`  - Display rules (trueruleStore): ${displayRules.length}`);
+                        console.log(`  - Collections (groupruleStore): ${collections.length}`);
+                        
+                        // Update debug info on page
+                        const debugInfo = document.getElementById('debugInfo');
+                        if (debugInfo) {
+                            debugInfo.innerHTML = `
+                                <strong>Database Status:</strong> Connected ✓<br>
+                                Total Records: ${allRules.length} | 
+                                Display Rules: ${displayRules.length} | 
+                                Collections: ${collections.length}
+                                ${collections.length > 0 ? '<br><strong style="color: #28a745;">Collections found!</strong>' : '<br><strong style="color: #dc3545;">No collections yet - create one below</strong>'}
+                            `;
+                        }
+                        
+                        if (collections.length > 0) {
+                            console.log("Sample collection:", collections[0]);
+                        }
+                        
+                        // Filter only collections (groupruleStore)
+                        allCollections = collections;
+                        console.log(`✓ Found ${allCollections.length} collections`);
+                        
+                        if (allCollections.length === 0) {
+                            console.warn("⚠️ No collections found in database!");
+                            console.log(`Database contains ${displayRules.length} display rules but 0 collections`);
+                            showEmptyState("No rule collections found. Create your first collection!");
+                        } else {
+                            console.log("Updating stats and displaying collections...");
+                            updateStats();
+                            displayCollections(allCollections);
+                        }
+                        
+                        db.close();
+                        console.log("=== LOAD COMPLETE ===");
+                    };
+                    
+                    getAllRequest.onerror = () => {
+                        console.error("❌ Error getting records:", getAllRequest.error);
+                        showEmptyState("Error loading collections from database.");
+                        db.close();
+                    };
+                };
+                
+                databaseOpenRequest.onerror = () => {
+                    console.error("❌ Error opening database:", databaseOpenRequest.error);
+                    showEmptyState("Error connecting to database.");
+                };
+                
+            } catch (error) {
+                console.error("❌ Error loading collections:", error);
+                showEmptyState("Error: " + error.message);
+            }
+        }
+
+        function updateStats() {
+            const total = allCollections.length;
+            const allLogic = allCollections.filter(c => c.ruleLogicType === 'all' || !c.ruleLogicType).length;
+            const anyLogic = allCollections.filter(c => c.ruleLogicType === 'any').length;
+            const countLogic = allCollections.filter(c => c.ruleLogicType === 'count').length;
+            const percentLogic = allCollections.filter(c => c.ruleLogicType === 'percent').length;
+
+            document.getElementById('totalCollections').textContent = total;
+            document.getElementById('allLogicCount').textContent = allLogic;
+            document.getElementById('anyLogicCount').textContent = anyLogic;
+            document.getElementById('countLogicCount').textContent = countLogic;
+            document.getElementById('percentLogicCount').textContent = percentLogic;
+        }
+
+        function displayCollections(collections) {
+            const container = document.getElementById('collectionsContainer');
+            const emptyState = document.getElementById('emptyState');
+            
+            if (collections.length === 0) {
+                container.innerHTML = '';
+                emptyState.classList.remove('hidealways');
+                return;
+            }
+            
+            emptyState.classList.add('hidealways');
+            container.innerHTML = '';
+            
+            collections.forEach(collection => {
+                const card = createCollectionCard(collection);
+                container.appendChild(card);
+            });
+        }
+
+        function createCollectionCard(collection) {
+            const card = document.createElement('div');
+            card.className = 'collection-card';
+            
+            const logicType = collection.ruleLogicType || 'all';
+            const logicClass = `logic-${logicType}`;
+            const logicLabel = logicType.toUpperCase();
+            
+            let logicDetail = '';
+            if (logicType === 'count') {
+                logicDetail = ` (min: ${collection.minRuleCount || 1})`;
+            } else if (logicType === 'percent') {
+                logicDetail = ` (min: ${collection.minRulePercent || 50}%)`;
+            }
+            
+            const rulesList = collection.allArrayID || [];
+            const rulesHTML = rulesList.map((ruleId, index) => {
+                const author = collection.allArrayAuthor ? collection.allArrayAuthor[index] : 'Unknown';
+                return `
+                    <div class="rule-item">
+                        <span class="rule-item-icon">📋</span>
+                        <strong>${ruleId}</strong>
+                        <small style="color: #666; margin-left: 0.5rem;">(${author})</small>
+                    </div>
+                `;
+            }).join('');
+            
+            card.innerHTML = `
+                <div class="collection-header">
+                    <div>
+                        <div class="collection-title">${collection.groupruleID}</div>
+                        <div class="collection-meta">
+                            <strong>Author:</strong> ${collection.groupruleAuthor} | 
+                            <strong>Created:</strong> ${new Date(collection.versionDateSince1969).toLocaleDateString()}
+                        </div>
+                    </div>
+                    <div class="badge-type">COLLECTION</div>
+                </div>
+                
+                <div class="collection-content">
+                    <strong>Description:</strong> ${collection.groupruleContent || collection.groupruleContentInnerText || 'No description'}
+                </div>
+                
+                <div style="margin-bottom: 1rem;">
+                    <span class="logic-badge ${logicClass}">
+                        ${logicLabel}${logicDetail}
+                    </span>
+                    <small style="color: #666;">Contains ${rulesList.length} rule${rulesList.length !== 1 ? 's' : ''}</small>
+                </div>
+                
+                <div class="rules-list">
+                    <strong style="color: #666; font-size: 0.9rem;">📋 Included Rules:</strong>
+                    ${rulesHTML}
+                </div>
+                
+                <div class="action-buttons" style="margin-top: 1rem;">
+                    <button class="btn btn-primary" onclick='editCollection(${JSON.stringify(collection.keyPathValue)})'>✏️ Edit</button>
+                    <button class="btn btn-secondary" onclick='viewCollection(${JSON.stringify(collection.keyPathValue)})'>👁️ View</button>
+                    <button class="btn btn-danger" onclick='deleteCollection(${JSON.stringify(collection.keyPathValue)})'>🗑️ Delete</button>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        function filterCollections() {
+            const searchText = document.getElementById('searchInput').value.toLowerCase();
+            const logicFilter = document.getElementById('logicFilter').value;
+            
+            let filtered = allCollections;
+            
+            // Apply logic type filter
+            if (logicFilter !== 'all') {
+                filtered = filtered.filter(c => (c.ruleLogicType || 'all') === logicFilter);
+            }
+            
+            // Apply search filter
+            if (searchText) {
+                filtered = filtered.filter(collection => {
+                    const author = (collection.groupruleAuthor || '').toLowerCase();
+                    const id = (collection.groupruleID || '').toLowerCase();
+                    const content = (collection.groupruleContent || collection.groupruleContentInnerText || '').toLowerCase();
+                    
+                    return author.includes(searchText) || 
+                           id.includes(searchText) || 
+                           content.includes(searchText);
+                });
+            }
+            
+            const statusEl = document.getElementById('searchStatus');
+            if (searchText || logicFilter !== 'all') {
+                statusEl.textContent = `Found ${filtered.length} of ${allCollections.length} collections`;
+                statusEl.style.color = filtered.length > 0 ? '#28a745' : '#dc3545';
+            } else {
+                statusEl.textContent = 'Ready to search...';
+                statusEl.style.color = '#666';
+            }
+            
+            displayCollections(filtered);
+        }
+
+        function showEmptyState(message) {
+            document.getElementById('collectionsContainer').innerHTML = '';
+            const emptyState = document.getElementById('emptyState');
+            emptyState.classList.remove('hidealways');
+            
+            if (message) {
+                emptyState.querySelector('p').textContent = message;
+            }
+        }
+
+        function refreshList() {
+            console.log("Refreshing collection list...");
+            loadCollections();
+        }
+
+        function createNewCollection() {
+            window.location.href = 'createCollection.html';
+        }
+
+        async function checkDatabase() {
+            try {
+                console.log("=== DATABASE CHECK ===");
+                const db = await new Promise((resolve, reject) => {
+                    const request = indexedDB.open('authorExcuTrust');
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+                
+                const tx = db.transaction('ruleStore', 'readonly');
+                const store = tx.objectStore('ruleStore');
+                const allRules = await new Promise((resolve, reject) => {
+                    const request = store.getAll();
+                    request.onsuccess = () => resolve(request.result || []);
+                    request.onerror = () => reject(request.error);
+                });
+                
+                const displayRules = allRules.filter(r => r.keyPathValue && r.keyPathValue[0] === 'trueruleStore');
+                const collections = allRules.filter(r => r.keyPathValue && r.keyPathValue[0] === 'groupruleStore');
+                
+                let message = `📊 Database Status:\n\n`;
+                message += `Total Records: ${allRules.length}\n`;
+                message += `Display Rules: ${displayRules.length}\n`;
+                message += `Collections: ${collections.length}\n\n`;
+                
+                if (collections.length > 0) {
+                    message += `📦 Collections:\n`;
+                    collections.forEach(c => {
+                        message += `  • ${c.groupruleID} (${c.groupruleAuthor})\n`;
+                    });
+                } else {
+                    message += `⚠️ No collections found!\n\nYou can:\n1. Click "New Collection" to create one\n2. Go to createTestData.html to create sample data`;
+                }
+                
+                console.log(message);
+                alert(message);
+                
+                db.close();
+            } catch (error) {
+                console.error('Database check error:', error);
+                alert('Error checking database: ' + error.message);
+            }
+        }
+
+        async function createTestCollectionNow() {
+            try {
+                console.log('=== CREATING TEST COLLECTION DIRECTLY ===');
+                
+                // First ensure we have display rules
+                const db = await new Promise((resolve, reject) => {
+                    const request = indexedDB.open('authorExcuTrust');
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+                
+                // Check for display rules first
+                let tx = db.transaction('ruleStore', 'readonly');
+                let store = tx.objectStore('ruleStore');
+                const allRules = await new Promise((resolve, reject) => {
+                    const request = store.getAll();
+                    request.onsuccess = () => resolve(request.result || []);
+                    request.onerror = () => reject(request.error);
+                });
+                
+                const displayRules = allRules.filter(r => r.keyPathValue && r.keyPathValue[0] === 'trueruleStore');
+                console.log('Found', displayRules.length, 'display rules');
+                
+                // Create display rules if none exist
+                if (displayRules.length === 0) {
+                    console.log('No display rules found, creating test rules...');
+                    tx = db.transaction('ruleStore', 'readwrite');
+                    store = tx.objectStore('ruleStore');
+                    
+                    const testRules = [
+                        {
+                            keyPathValue: ["trueruleStore", 1, "JSM", 1, "AGE_OVER_18"],
+                            ruleContent: "User must be 18 years or older",
+                            ruleContentInnerText: "User must be 18 years or older",
+                            ruleAuthor: "JSM",
+                            ruleID: "AGE_OVER_18",
+                            versionDateSince1969: Date.now(),
+                            localTimeString: new Date().toString()
+                        },
+                        {
+                            keyPathValue: ["trueruleStore", 1, "JSM", 1, "EMAIL_VERIFIED"],
+                            ruleContent: "User email must be verified",
+                            ruleContentInnerText: "User email must be verified",
+                            ruleAuthor: "JSM",
+                            ruleID: "EMAIL_VERIFIED",
+                            versionDateSince1969: Date.now(),
+                            localTimeString: new Date().toString()
+                        }
+                    ];
+                    
+                    for (const rule of testRules) {
+                        await new Promise(resolve => {
+                            const req = store.put(rule);
+                            req.onsuccess = () => resolve();
+                            req.onerror = () => resolve();
+                        });
+                    }
+                    
+                    console.log('✓ Created', testRules.length, 'display rules');
+                }
+                
+                // Now create a test collection
+                tx = db.transaction('ruleStore', 'readwrite');
+                store = tx.objectStore('ruleStore');
+                
+                const timestamp = Date.now();
+                const testCollection = {
+                    keyPathValue: ["groupruleStore", 1, "TEST", 1, "TEST_COLLECTION_" + timestamp],
+                    groupruleContent: "Test Collection Created Directly - " + new Date().toLocaleTimeString(),
+                    groupruleContentInnerText: "Test Collection Created Directly - " + new Date().toLocaleTimeString(),
+                    groupruleAuthor: "TEST",
+                    groupruleID: "TEST_COLLECTION_" + timestamp,
+                    ruleLogicType: "all",
+                    all0Any1True: false,
+                    allRowChoices: [],
+                    allArrayType: ["trueruleStore", "trueruleStore"],
+                    allArrayAuthor: ["JSM", "JSM"],
+                    allArrayID: ["AGE_OVER_18", "EMAIL_VERIFIED"],
+                    versionDateSince1969: timestamp,
+                    localTimeString: new Date().toString()
+                };
+                
+                console.log('Creating collection:', testCollection);
+                
+                await new Promise((resolve, reject) => {
+                    const request = store.add(testCollection);
+                    request.onsuccess = () => {
+                        console.log('✓ Collection created successfully!');
+                        resolve();
+                    };
+                    request.onerror = () => {
+                        console.error('✗ Error creating collection:', request.error);
+                        reject(request.error);
+                    };
+                });
+                
+                db.close();
+                
+                alert('✅ Test collection created successfully!\n\nRefreshing page...');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 500);
+                
+            } catch (error) {
+                console.error('Error creating test collection:', error);
+                alert('❌ Error: ' + error.message + '\n\nCheck console for details.');
+            }
+        }
+
+        function editCollection(keyPathValue) {
+            console.log("Edit collection:", keyPathValue);
+            const author = keyPathValue[2];
+            const id = keyPathValue[4];
+            // Redirect to dedicated editCollection.html page
+            window.location.href = `editCollection.html?author=${encodeURIComponent(author)}&id=${encodeURIComponent(id)}`;
+        }
+
+        function viewCollection(keyPathValue) {
+            console.log("View collection:", keyPathValue);
+            const author = keyPathValue[2];
+            const id = keyPathValue[4];
+            // Redirect to editCollection.html with view mode
+            window.location.href = `editCollection.html?action=view&author=${encodeURIComponent(author)}&id=${encodeURIComponent(id)}`;
+        }
+
+        function deleteCollection(keyPathValue) {
+            const author = keyPathValue[2];
+            const id = keyPathValue[4];
+            
+            if (!confirm(`Are you sure you want to delete the collection "${id}" by ${author}?\n\nThis action cannot be undone.`)) {
+                return;
+            }
+
+            const database = "authorExcuTrust";
+            const databaseOpenRequest = indexedDB.open(database);
+            
+            databaseOpenRequest.onsuccess = () => {
+                const db = databaseOpenRequest.result;
+                
+                try {
+                    const tx = db.transaction("ruleStore", "readwrite");
+                    const store = tx.objectStore("ruleStore");
+                    const deleteRequest = store.delete(keyPathValue);
+                    
+                    deleteRequest.onsuccess = () => {
+                        console.log(`✓ Collection ${id} deleted successfully`);
+                        alert(`Collection "${id}" deleted successfully!`);
+                        refreshList();
+                    };
+                    
+                    deleteRequest.onerror = () => {
+                        console.error("Error deleting collection:", deleteRequest.error);
+                        alert("Error deleting collection: " + deleteRequest.error);
+                    };
+                    
+                    tx.oncomplete = () => db.close();
+                    
+                } catch (error) {
+                    console.error("Error in delete operation:", error);
+                    alert("Error deleting collection: " + error.message);
+                    db.close();
+                }
+            };
+            
+            databaseOpenRequest.onerror = () => {
+                console.error("Error opening database:", databaseOpenRequest.error);
+                alert("Error connecting to database");
+            };
+        }
+    </script>
+</body>
+</html>

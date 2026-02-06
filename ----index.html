@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Question Generator Selector - Modern Legal Theme</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    <!-- Modern CSS -->
+    <link rel="stylesheet" href="design_system.css">
+    <link rel="stylesheet" href="modern_styles.css">
+    
+    <!-- jQuery (Still needed for some legacy logic likely, though we could remove if pure vanilla is desired later) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    
+    <!-- Firebase (Preserved) -->
+    <script src="https://www.gstatic.com/firebasejs/7.22.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.22.1/firebase-firestore.js"></script>
+
+    <!-- IndexedDB Setup -->
+    <script src="setupIndexedDB.js"></script>
+    
+    <!-- Group Rule Logic -->
+    <script src="GenerateRule.js"></script>
+
+  </head>
+  <body data-spy="scroll" data-target=".navbar" data-offset="50">
+    
+    <!-- Hidden Process Trackers -->
+    <h1 id="testForChange" class="hidealways"></h1>
+    <h1 id="process0" class="hidealways"></h1>
+    <h1 id="process1" class="hidealways"></h1>
+    <h1 id="process2" class="hidealways"></h1>
+    <h1 id="testForChange2" class="hidealways"></h1>
+    <h1 id="process2Count" class="hidealways"></h1>
+
+    <div class="container">
+      <h3 id="formtitle" class="formtitleStart">
+        Begin by Choosing an Option
+      </h3>
+
+      <div style="text-align: center; margin-bottom: 2rem;">
+        <input type="button" class="btn btn-outline-primary" value="Toggle Menu" data-screen="menuChoicesToggle" id="menuChoicesToggle">
+      </div>
+
+      <div id="menuChoices">
+        <div class="row" style="gap: 1rem; justify-content: center;">
+            <div class="col-12" style="text-align: center;">
+                <h4 style="border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;">Questionnaire Management</h4>
+            </div>
+            
+            <div class="col-4">
+                <input type="button" class="btn btn-outline-primary" style="width: 100%" value="Select Questionnaire" data-screen="buildSelectQuestionnaire">
+            </div>
+            <div class="col-4">
+                <input type="button" class="btn btn-outline-primary" style="width: 100%" value="Renumber Development" data-screen="renumberquestionnairedevelopment">
+            </div>
+            <div class="col-4">
+                <input type="button" class="btn btn-outline-primary" style="width: 100%" value="Use Grid for Questions" data-screen="updateGridRowsFromDatabase">
+            </div>
+
+            <div class="col-12" style="text-align: center; margin-top: 1rem;">
+                <input type="button" class="btn btn-outline-primary" value="Retrieve All Data from Server" onclick="getAllFromFireStore()" data-screen="getAllFromFireStore">
+            </div>
+
+            <div class="col-12" style="text-align: center; margin-top: 1rem;">
+                 <h4 style="border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;">Creation Tools</h4>
+            </div>
+
+            <div class="col-6" style="display: flex; gap: 0.5rem; justify-content: center;">
+                <input type="button" class="btn btn-primary" value="New Questionnaire" data-screen="newQuestionnaire">
+                <input type="button" class="btn btn-secondary" value="New Question" data-screen="newQuestion">
+            </div>
+             <div class="col-6" style="display: flex; gap: 0.5rem; justify-content: center;">
+                <input type="button" class="btn btn-outline-danger" value="New Display Rule" data-screen="newDisplayRule">
+                <input type="button" class="btn btn-warning" value="Collection of Rules" data-screen="collectionOfDisplayRules">
+            </div>
+
+            <div class="col-12" style="text-align: center; margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                 <div class="btnmargin">
+                    <input type="button" class="btn btn-outline-primary" onclick="selectQuestionnaire()" value="Select Questionnaire">
+                    <input type="button" class="btn btn-outline-dark" onclick="selectQuestion()" value="Select Question">
+                    <input type="button" class="btn btn-outline-warning" onclick="window.location.href='ManageRules.html'" value="Manage Rules & Collections">
+                    <input type="button" class="btn btn-outline-secondary" onclick="window.location.href='ManageAuthors.html'" value="Manage Authors">
+                </div>
+            </div>
+            
+            <div class="col-12" style="text-align: center; margin-top: 1rem;">
+                 <input type="button" class="btn btn-danger saver" onclick="saveAnswers()" value="SAVE CHANGES" id="saveButton" style="display: none;">
+                 <input type="button" class="btn btn-secondary" onclick="window.location.href='ManageRules.html'" value="← Back to Rules" id="backToRulesButton" style="display: none; margin-left: 10px;">
+                 <input id="outofOrderBtn" class="btn btn-primary hidealways" type="button" onclick="sortByValueAsNumber0()" value="Sort by Position Number">
+            </div>
+            
+            <div class="col-12" style="text-align: center; margin-top: 1.5rem; border-top: 1px dashed var(--border-color); padding-top: 1rem;">
+                 <a href="GroupRuleDemo.html" target="_blank" class="btn btn-info" style="text-decoration: none;">
+                    📊 View Group Rule Demo & Testing
+                 </a>
+                 <small style="display: block; margin-top: 0.5rem; color: #666;">Interactive demo showing ALL/ANY/COUNT/PERCENT logic evaluation</small>
+            </div>
+        </div>
+      </div>
+
+      <!-- Snackbar -->
+      <div id="snackbar">Some text some message..</div>
+
+      <!-- Missing Fields Alert -->
+      <div id="missing" style="display: none; background-color: #fef2f2; border: 1px solid var(--color-danger); color: var(--color-danger); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1rem;">
+        <ul>
+          <li id="requiredInput">Required Number of Input Fields:</li>
+        </ul>
+      </div>
+
+      <!-- Modal -->
+      <div id="myModal" class="modal hidestart">
+        <div class="modal-dialog">
+          <div class="modal-content" id="modal-content">
+            <div class="modal-header">
+              <h1 class="modal-title" id="modaltitle">Modal Heading</h1>
+              <button type="button" class="close" onclick="document.getElementById('myModal').style.display='none'">×</button>
+            </div>
+            <div class="modal-body">
+              <span id="modal-body-1">
+                <h5>Author Search: <input type="text" id="modalJoeInput" onkeyup="modalJoeFilter()" placeholder="Search..."></h5>
+                <h5>ID Search: <input type="text" id="modalJoeIDInput" onkeyup="modalJoeFilter()" placeholder="Search..."></h5>
+                <h5>Question Search: <input type="text" id="modalJoeWordInput" onkeyup="modalJoeFilter()" placeholder="Search..."></h5>
+              </span>
+              <span id="modal-body-2" class="hideAlways">Choose Answer:</span>
+              <div id="modal-list"></div>
+            </div>
+            <div class="modal-footer" style="display: flex; justify-content: flex-end; margin-top: 1rem;">
+              <button type="button" class="btn btn-danger" onclick="document.getElementById('myModal').style.display='none'">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Wrappers -->
+      <div id="allWrappers">
+        
+        <!-- Questionnaire Wrapper -->
+        <div id="questionnaireWrapper" class="hidealways">
+            <h2 id="questionnairetitle">Questionnaire:</h2>
+            <div class="card">
+                <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                    <input class="btn btn-danger saver" type="button" onclick="lockAll()" id="preventQuestionnaireAllChanges" value="Lock">
+                    <input class="btn btn-warning" type="button" onclick="unlockAll()" id="allowQuestionnaireAllChanges" value="Unlock">
+                    <input type="checkbox" value="false" id="makeQuestionnaireCopy" class="hidealways">
+                </div>
+                
+                <div class="row" style="align-items: center; margin-bottom: 0.5rem;">
+                    <div class="col-3 text-primary">AUTHOR:</div>
+                    <div class="col-9"><div id="questionnaireAuthor" class="required missing" contenteditable="true" style="border: 1px solid var(--border-color); padding: 0.5rem; border-radius: var(--radius-sm);" onfocus="focusFormattingQuestionnaireAuthor()" onblur="trimCapNoFormattingQuestionnaireAuthor()"></div></div>
+                </div>
+                <div class="row" style="align-items: center; margin-bottom: 0.5rem;">
+                    <div class="col-3 text-primary">ID:</div>
+                    <div class="col-9"><div id="questionnaireID" class="required missing" contenteditable="true" style="border: 1px solid var(--border-color); padding: 0.5rem; border-radius: var(--radius-sm);" onfocus="focusFormattingQuestionnaireID()" onblur="trimCapNoFormattingQuestionnaireID()"></div></div>
+                </div>
+                 <div class="row" style="align-items: center; margin-bottom: 0.5rem;">
+                    <div class="col-3 text-primary">Title:</div>
+                    <div class="col-9"><div id="questionnaireContent" class="required missing" contenteditable="true" style="border: 1px solid var(--border-color); padding: 0.5rem; border-radius: var(--radius-sm);" onblur="trimCapNoFormattingQuestionnaire()"></div></div>
+                </div>
+            </div>
+            
+            <div id="questionnaireAnswerChoices" class="card">
+                <!-- Dynamic Content Loaded Here -->
+            </div>
+        </div>
+
+        <!-- Group Rule Wrapper - Enhanced 2026-01-29 -->
+        <div id="groupruleWrapper" class="hidealways">
+             <div class="groupruletitle">
+                <h2>Collection of Display Rules:</h2>
+                <div>Number of Collections: <span id="numberOfgroupruleWrapper">0</span> + Display Rules: <span id="numberOfruleWrapper">0</span> = Total: <span id="totalNumberOfRulesWrapper">0</span></div>
+             </div>
+             <div class="card" style="padding: 1.5rem;">
+                <div class="row mb-3">
+                   <div class="col-3"><strong>AUTHOR:</strong></div>
+                   <div class="col-9">
+                      <div id="groupruleAuthor" class="missing" style="border: 1px solid var(--border-color); padding: 0.5rem;">Author Name</div>
+                   </div>
+                </div>
+                <div class="row mb-3">
+                   <div class="col-3"><strong>ID:</strong></div>
+                   <div class="col-9">
+                      <div id="groupruleID" contenteditable="true" class="missing" style="border: 1px solid var(--border-color); padding: 0.5rem;">Enter ID</div>
+                   </div>
+                </div>
+                <div class="row mb-3">
+                   <div class="col-3"><strong>Title:</strong></div>
+                   <div class="col-9">
+                      <div id="groupruleContent" contenteditable="true" class="missing" style="border: 1px solid var(--border-color); padding: 0.5rem;">Enter title</div>
+                   </div>
+                </div>
+                <br>
+                <div class="container border border-info p-3 mb-3" style="background-color: #f0f8ff;">
+                   <h5>Rule Evaluation Logic:</h5>
+                   <div class="row mb-2">
+                      <div class="col-12">
+                         <label for="ruleLogicType"><b>Select how rules should be evaluated:</b></label>
+                         <select id="ruleLogicType" class="form-control" onchange="updateGroupRuleLogicDisplay()" style="max-width: 400px;">
+                            <option value="all">All rules must be true (AND)</option>
+                            <option value="any">Any rule must be true (OR)</option>
+                            <option value="count">At least N rules must be true</option>
+                            <option value="percent">At least X% of rules must be true</option>
+                         </select>
+                      </div>
+                   </div>
+                   <div id="ruleCountInput" class="row mb-2 hidealways">
+                      <div class="col-12">
+                         <label for="minRuleCount">Minimum number of rules that must be true:</label>
+                         <input type="number" id="minRuleCount" class="form-control" min="1" value="1" onchange="onRuleCountChange()" style="max-width: 150px;">
+                      </div>
+                   </div>
+                   <div id="rulePercentInput" class="row mb-2 hidealways">
+                      <div class="col-12">
+                         <label for="minRulePercent">Minimum percentage of rules that must be true:</label>
+                         <input type="number" id="minRulePercent" class="form-control" min="1" max="100" value="50" onchange="onRulePercentChange()" style="max-width: 150px;">
+                         <small class="form-text text-muted">Enter a value between 1 and 100</small>
+                      </div>
+                   </div>
+                   <div class="row mt-3">
+                      <div class="col-12">
+                         <div class="alert alert-success" role="alert" style="background: #d4edda; border: 1px solid #c3e6cb; padding: 1rem; border-radius: 4px;">
+                            <span id="ruleLogicDisplayText">Display only when <b><u>all</u></b> rules below are true.</span>
+                         </div>
+                      </div>
+                   </div>
+                </div>
+                <div id="questionAnswerChoices">
+                   <!-- Rules will be dynamically added here -->
+                </div>
+             </div>
+        </div>
+
+        <!-- Rule Wrapper -->
+        <div id="ruleWrapper" class="hidealways">
+             <h2 id="ruletitle">Rule:</h2>
+             <div class="card">
+                <div id="ruleAuthor" contenteditable="true" class="missing" style="border: 1px solid var(--border-color); padding: 0.5rem;"></div>
+                <div id="ruleID" contenteditable="true" class="missing" style="border: 1px solid var(--border-color); padding: 0.5rem;"></div>
+                <div id="ruleContent" contenteditable="true" class="missing" style="border: 1px solid var(--border-color); padding: 0.5rem;"></div>
+             </div>
+        </div>
+
+        <!-- Question Wrapper -->
+        <div id="questionWrapper" class="questionwrapper hidealways">
+            <h2 id="questiontitle">Question:</h2>
+            <div class="card">
+                 <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                    <input class="btn btn-danger saver" type="button" onclick="lockAll()" id="preventAllChanges" value="Lock">
+                    <input class="btn btn-warning" type="button" onclick="unlockAll()" id="allowAllChanges" value="Unlock">
+                </div>
+                
+                <div class="row" style="align-items: center; margin-bottom: 0.5rem;">
+                    <div class="col-3 text-primary">AUTHOR:</div>
+                    <div class="col-9"><div id="questionAuthor" class="required missing" contenteditable="true" style="border: 1px solid var(--border-color); padding: 0.5rem; border-radius: var(--radius-sm);" onfocus="focusFormattingAuthor()" onblur="trimCapNoFormattingAuthor()"></div></div>
+                </div>
+                 <div class="row" style="align-items: center; margin-bottom: 0.5rem;">
+                    <div class="col-3 text-primary">ID:</div>
+                    <div class="col-9"><div id="questionID" class="required missing" contenteditable="true" style="border: 1px solid var(--border-color); padding: 0.5rem; border-radius: var(--radius-sm);" onfocus="focusFormattingID()" onblur="trimCapNoFormattingID()"></div></div>
+                </div>
+                 <div class="row" style="align-items: center; margin-bottom: 0.5rem;">
+                    <div class="col-3 text-primary">Question:</div>
+                    <div class="col-9"><div id="questionContent" class="required missing" contenteditable="true" style="border: 1px solid var(--border-color); padding: 0.5rem; border-radius: var(--radius-sm);" onblur="trimCapNoFormatting()"></div></div>
+                </div>
+
+                <div class="container" style="margin-top: 2rem;">
+                    <h5 class="text-primary">Type of Question:</h5>
+                    <div id="questionTypeDiv" class="missing" style="padding: 1rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                        <p id="allChoiceTypes">
+                            <!-- Radio buttons for types will be injected here or are static -->
+                             <!-- Simplified for v2 structure, keeping original logic hooks -->
+                             <b>Multiple Choice:</b><br>
+                             <label class="btn btn-outline-secondary"><input type="radio" id="questionTypeDiv_radio" name="questionTypeDiv" value="questionTypeDiv_radio" onclick="trueTypeQuestion('questionTypeDivList')"> Radio Button</label>
+                             <label class="btn btn-outline-secondary"><input type="radio" id="questionTypeDiv_modal" name="questionTypeDiv" value="questionTypeDiv_modal" onclick="trueTypeQuestion('questionTypeDivList')"> Modal</label>
+                             <label class="btn btn-outline-secondary"><input type="radio" id="questionTypeDiv_dropdown" name="questionTypeDiv" value="questionTypeDiv_dropdown" onclick="trueTypeQuestion('questionTypeDivList')"> Drop Down</label>
+                             <br><br><b>Other:</b><br>
+                             <label class="btn btn-outline-secondary"><input type="radio" id="questionTypeDiv_text" name="questionTypeDiv" value="questionTypeDiv_text" onclick="trueTypeQuestion('questionTypeDivList')"> Text</label>
+                             <label class="btn btn-outline-secondary"><input type="radio" id="questionTypeDiv_date" name="questionTypeDiv" value="questionTypeDiv_date" onclick="trueTypeQuestion('questionTypeDivList')"> Date</label>
+                             <label class="btn btn-outline-secondary"><input type="radio" id="questionTypeDiv_checkbox" name="questionTypeDiv" value="questionTypeDiv_checkbox" onclick="trueTypeQuestion('questionTypeDivList')"> Checkbox</label>
+                        </p>
+                    </div>
+                </div>
+
+                 <div id="questionAnswerChoicesHeader"></div>
+                 <div id="questionAnswerChoices"></div>
+
+            </div>
+        </div>
+
+        <!-- Grid Wrapper (Required by JS) -->
+        <div id="firstGrid1" class="hidealways"></div>
+
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="questionGeneratorSelector.js"></script>
+    <!-- We might need to update the JS to handle the removal of Bootstrap JS dependency if modals relied on it, 
+         but for now we are keeping the logic file same and just changing classes. 
+         The 'onclick' handlers in HTML are key. -->
+    <script>
+        // Helper to handle modal closing since we removed bootstrap.js
+        document.querySelectorAll('.close, .btn-danger[data-dismiss="modal"]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.getElementById('myModal').style.display = 'none';
+            });
+        });
+        
+        // Handle URL parameters for edit/view actions from ManageRules.html (2026-01-29)
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const action = urlParams.get('action');
+            const type = urlParams.get('type');
+            const author = urlParams.get('author');
+            const id = urlParams.get('id');
+            
+            console.log("URL Parameters:", { action, type, author, id });
+            
+            if (action && type && author && id) {
+                // Hide menu
+                document.getElementById('menuChoices').style.display = 'none';
+                
+                // Build keyPathValue array
+                const keyPathValue = [type, 1, decodeURIComponent(author), 1, decodeURIComponent(id)];
+                console.log("Loading rule with keyPathValue:", keyPathValue);
+                
+                // Show back button and save button
+                const backButton = document.getElementById('backToRulesButton');
+                if (backButton) backButton.style.display = 'inline-block';
+                
+                if (action === 'edit' || action === 'view') {
+                    // Prepare the form first, then load the rule
+                    setTimeout(() => {
+                        console.log("Preparing form for type:", type);
+                        
+                        // Initialize the appropriate form based on rule type
+                        if (type === 'groupruleStore') {
+                            console.log("Calling doGrouprulePart2()");
+                            if (typeof doGrouprulePart2 === 'function') {
+                                doGrouprulePart2();
+                            }
+                        } else if (type === 'trueruleStore') {
+                            console.log("Calling emptyRule31()");
+                            if (typeof emptyRule31 === 'function') {
+                                emptyRule31();
+                            }
+                        }
+                        
+                        // Now retrieve and populate the form
+                        setTimeout(() => {
+                            console.log("Calling retrieve() with keyPathValue:", keyPathValue);
+                            if (typeof retrieve === 'function') {
+                                retrieve(keyPathValue);
+                            } else {
+                                console.error("retrieve function not found!");
+                            }
+                            
+                            // Apply view/edit mode settings
+                            setTimeout(() => {
+                                // Show save button for edit mode
+                                const saveButton = document.getElementById('saveButton');
+                                
+                                if (action === 'view') {
+                                    // Make all editable elements read-only
+                                    document.querySelectorAll('[contenteditable="true"]').forEach(el => {
+                                        el.contentEditable = 'false';
+                                        el.style.backgroundColor = '#f5f5f5';
+                                        el.style.cursor = 'not-allowed';
+                                    });
+                                    
+                                    // Disable all inputs and selects except back button
+                                    document.querySelectorAll('input:not(#backToRulesButton), select, textarea').forEach(el => {
+                                        el.disabled = true;
+                                    });
+                                    
+                                    // Hide save button
+                                    if (saveButton) saveButton.style.display = 'none';
+                                    
+                                    // Add view mode indicator
+                                    const container = document.querySelector('.container');
+                                    if (container) {
+                                        const viewAlert = document.createElement('div');
+                                        viewAlert.className = 'alert alert-info';
+                                        viewAlert.style.marginTop = '10px';
+                                        viewAlert.innerHTML = '<strong>👁️ View Mode:</strong> This rule is in read-only mode. Click "Back to Rules" to return or edit this rule.';
+                                        container.insertBefore(viewAlert, container.firstChild);
+                                    }
+                                } else if (action === 'edit') {
+                                    // Show save button for edit mode
+                                    if (saveButton) {
+                                        saveButton.style.display = 'inline-block';
+                                        saveButton.value = type === 'groupruleStore' ? 'SAVE COLLECTION CHANGES' : 'SAVE RULE CHANGES';
+                                    }
+                                    
+                                    // Add edit mode indicator
+                                    const container = document.querySelector('.container');
+                                    if (container) {
+                                        const editAlert = document.createElement('div');
+                                        editAlert.className = 'alert alert-warning';
+                                        editAlert.style.marginTop = '10px';
+                                        editAlert.innerHTML = '<strong>✏️ Edit Mode:</strong> Modify the rule below and click "' + (saveButton ? saveButton.value : 'SAVE CHANGES') + '" when done.';
+                                        container.insertBefore(editAlert, container.firstChild);
+                                    }
+                                }
+                            }, 1000);
+                        }, 500);
+                    }, 500);
+                }
+            } else if (action === 'newDisplayRule') {
+                // Handle new display rule
+                setTimeout(() => {
+                    if (typeof emptyRule31 === 'function') {
+                        emptyRule31();
+                    }
+                }, 500);
+            } else if (action === 'newCollection') {
+                // Handle new collection
+                setTimeout(() => {
+                    if (typeof doGrouprulePart2 === 'function') {
+                        doGrouprulePart2();
+                    }
+                }, 500);
+            }
+        });
+    </script>
+  </body>
+</html>

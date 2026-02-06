@@ -1,0 +1,589 @@
+/*
+*** from grid8.css
+*/
+/*
+
+suggested media width from grid component site:  - likely a bootstrap guide:
+Grid options
+Extra small devices Phones (<576px)	Small devices Tablets (≥576px)	Medium devices Desktops (≥768px)	Large devices Desktops (≥992px)	Large devices Desktops (≥1200px)
+Grid behavior	Horizontal at all times	Collapsed to start, horizontal above breakpoints
+Container width	None (auto)	540px	720px	960px	1140px
+Class prefix	.col-	.col-sm-	.col-md-	.col-lg-	.col-xl-
+None (auto)	540px	720px	960px	1140px
+
+ - effectively 4, 
+
+Curently use: - default plus 2 below, so effectively 3
+@media (min-width: 600px)
+@media (min-width: 1200px) 
+
+
+
+*/
+
+
+* {
+	padding: 5px;
+	margin: 2px; 
+}
+
+/* The snackbar - position it at the bottom and in the middle of the screen */
+#snackbar {
+  visibility: hidden; /* Hidden by default. Visible on click */
+  min-width: 250px; /* Set a default minimum width */
+  margin-left: -125px; /* Divide value of min-width by 2 */
+  background-color: #333; /* Black background color */
+  color: #fff; /* White text color */
+  text-align: center; /* Centered text */
+  border-radius: 2px; /* Rounded borders */
+  padding: 16px; /* Padding */
+  position: fixed; /* Sit on top of the screen */
+  z-index: 1; /* Add a z-index if needed */
+  left: 50%; /* Center the snackbar */
+  bottom: 30px; /* 30px from the bottom */
+}
+
+/* Show the snackbar when clicking on a button (class added with JavaScript) */
+#snackbar.show {
+  visibility: visible; /* Show the snackbar */
+  /* Add animation: Take 0.5 seconds to fade in and out the snackbar.
+  However, delay the fade out process for 2.5 seconds */
+  -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
+  animation: fadein 0.5s, fadeout 0.5s 2.5s;
+}
+
+/* Animations to fade the snackbar in and out */
+@-webkit-keyframes fadein {
+  from {bottom: 0; opacity: 0;}
+  to {bottom: 30px; opacity: 1;}
+}
+
+@keyframes fadein {
+  from {bottom: 0; opacity: 0;}
+  to {bottom: 30px; opacity: 1;}
+}
+
+@-webkit-keyframes fadeout {
+  from {bottom: 30px; opacity: 1;}
+  to {bottom: 0; opacity: 0;}
+}
+
+@keyframes fadeout {
+  from {bottom: 30px; opacity: 1;}
+  to {bottom: 0; opacity: 0;}
+}
+
+
+
+
+
+
+
+
+
+body {
+  background-color: white;
+  font-size: 1rem;
+}
+.beginline {
+  display: inline;
+}
+
+.endline {
+  /*padding: .2rem; */
+  /*margin: .2rem; */
+  display: inline;
+  float: right;
+  /*
+  */
+}
+.grid {
+	display: grid;
+	grid-template-columns: 1fr ;
+        grid-auto-flow: row;
+}
+.grid1 {
+        display: grid;	
+	grid-template-columns: 1fr 63fr ;
+}
+.title {
+	background-color: rgb(203, 243, 243);
+        grid-column: 1 / -1;
+}
+.sidebar {
+	background-color:  white;
+	;
+	color: black;
+        grid-column: 1;
+}
+.content {
+	background-color: white;
+	color: black;
+	font-size: 1rem;
+  /*
+  grid-column: 2 / 2;
+  */
+  grid-column: 2
+}
+.ruleDescription {
+  background-color: white;
+  display:flex
+  /*flex-direction: column*/
+}
+.answer {
+        background-color: LightYellow; 
+	color: black;
+  font-size: 1rem;
+    /*
+  grid-column: 2 / 2;
+  */
+  grid-column: 2
+}
+.sign {
+        /* background-color: LightYellow; */
+	color: red;
+        justify-content: space-evenly;
+        font-size: 1rem;
+    /*
+  grid-column: 2 / 2;
+  */
+  grid-column: 2
+}
+.attach {
+        /* background-color: LightYellow; */
+	color: green;
+        grid-column: 2 / 2;
+        justify-content: space-evenly;
+        font-size: 1rem;
+}
+.footer {
+	background-color: #F9FFEA;
+        grid-column: 1 / -1;
+}
+.header {
+	background-color: #FFC300;
+}
+.p	{
+ background-color: whitesmoke;
+	color: black;
+	font-size: 1rem;
+}
+@media (min-width: 600px) {
+  /*
+.p {
+    background-color: 	#FFC0CB;
+  }
+  */
+.grid {
+	display: grid;
+	grid-template-columns: 1fr ;
+        grid-auto-flow: row;
+}
+.grid1 {
+  display: grid;
+  /*
+  grid-template-columns: 1fr 20fr 20fr 20fr 20fr ;
+  */
+  grid-template-columns: 1fr 20fr 20fr 20fr  ;
+}
+.grid0 {
+	display:block;
+}
+.grid01 {
+	display:block;
+}
+.sidebar {
+	background-color: white;
+	color: black;
+        grid-column: 1;
+}
+.content {
+	color: black;
+	grid-column: 2 / -1;
+}
+.answer {
+      /*  background-color: LightYellow; */
+	color: black;
+  /*
+  grid-column: 2 / 2;
+  */
+  grid-column: 2
+}
+.sign {
+        /* background-color: LightYellow; */
+	color: red;
+	grid-column: 4 / 4;
+        justify-content: space-evenly;
+}
+.attach {
+        /* background-color: LightYellow; */
+	color: green;
+        grid-column: 3 / 3;
+        justify-content: space-evenly;
+}
+}
+@media (min-width: 1500px){
+/*
+1700 too large
+  @media (min-width: 1200px) {
+*/
+  /*
+.p {
+    background-color: lightgreen;
+  }
+  */
+.grid {
+	display: grid;
+	grid-template-columns: 1fr;
+        grid-auto-flow: row;
+}
+.grid1 {
+	display: grid;
+	grid-template-columns: 1fr 180fr 60fr 40fr 30fr ;
+}
+
+.sidebar {
+	background-color: white;
+	color: black;
+        grid-column: 1;
+}
+.content {
+	color: black;
+	grid-column: 2;
+}
+.answer {
+      /*  background-color: LightYellow; */
+	color: black;
+	grid-column: 3;
+}
+.sign {
+        /* background-color: LightYellow; */
+	color: red;
+	grid-column: 5;
+        justify-content: space-evenly;
+}
+.attach {
+        /* background-color: LightYellow; */
+	color: green;
+        grid-column: 4;
+        justify-content: space-evenly;
+}
+}
+
+
+
+/*
+*** end of  grid8.css
+*/
+button { 
+  display: block;
+  margin:0.3em;	
+  -webkit-appearance:normal;
+  font-size: 1em;
+  word-wrap: break-word;
+  /*
+    border: 1px solid  #ccc ;  
+  border-radius: 8px;
+  width: 3em;
+  line-height: 2em;
+  padding: 0.2em;
+  */
+}
+.allowSelectRule{
+ /*
+  word-wrap: break-word;
+  word-break: normal ;
+  */
+  display: flex ;
+  flex-wrap: wrap
+}
+
+
+#allWrappers {
+  margin: .5em
+}
+
+.questionnaireanswerchoices {
+  margin: .5em
+}
+
+body {
+    position: relative; 
+  }
+
+.moveLeft {
+   padding: -.25rem ;
+   margin: -.25rem;
+   /* used to move but does not give extra space yet, may need to use non-container above??*/
+}
+
+.missing{
+      background-color: lightyellow;
+      border:gold solid .05rem;
+    } /**/
+
+.rowChoice{
+  /* padding: .25rem ; */
+  /*
+  margin: .25rem; 
+    margin-bottom: .5rem;
+  margin-top: .5rem;
+  */ 
+  margin: .25rem;
+  padding-top: .5rem;
+  padding-bottom: .5rem;
+  /*border-bottom:  dotted lightgrey .05rem;
+  border-bottom:  dotted lightgrey .1rem; */
+  border-top:  dotted grey .1rem;
+} /**/
+
+.NOrowChoice{
+  margin-bottom: .5rem;
+  margin-top: .5rem;
+  padding-top: .5rem;
+  padding-bottom: .5rem;
+  border-top:  solid black .1rem;
+} /**/
+
+
+
+
+.modal-dialog {
+  overflow-y:scroll ;
+}
+.formtitlequestion {
+  padding: .25rem;
+  border: .2rem solid black;
+  text-align: center;
+  margin: .3rem;
+  color:black;
+  position: fixed ;
+  top: 0px ;
+  right: 0px ;
+  left:  0px ;
+}
+.formtitlequestionnaire {
+  padding: .25rem;
+  border: .2rem solid blue;
+  text-align: center;
+  margin: .3rem;
+  color:blue;
+  position: fixed ;
+/*  top: 0px ;
+  right: 0px ;
+  left:  0px ; */
+  margin: .3rem
+  /*padding: .25rem;*/
+}
+.btext {
+  color: black ;
+  margin: .25rem ;
+  /* font-weight: bold; */
+}
+
+.gbtext {
+  color: black ;
+  margin: .25rem ;
+  padding: .25rem;
+  border: .2rem solid goldenrod;
+  /* font-weight: bold; */
+}
+
+
+.groupruletitle {
+  padding: .25rem;
+  color: goldenrod ;
+}
+
+
+.questionnairetitle {
+  padding: .25rem;
+  color: blue;
+  margin: .3rem
+}
+
+.questionnaireSelectModal {
+  border: .2rem solid blue ;
+  padding: .1rem ;
+  margin: .2rem
+}
+#questionnaireWrapper {
+  border: .2rem solid blue ;
+  margin: 2rem solid yellow; /* not sure why, does not seem to change */
+  padding:2rem solid green;  /* not sure why, does not seem to change */
+}
+/*
+.questionnaireWrapper {
+  border: 2rem solid blue ;
+  margin: 2rem solid yellow;
+  padding:2rem solid green;
+} */
+
+
+#questionWrapper {
+  border: .2rem solid black ;
+  margin: .2em ;
+  padding: .2em ;
+}
+
+.questionWrapper {
+  border: .2rem solid black ;
+  margin: .2em ;
+  padding: .2em ;
+}
+
+
+#ruleWrapper {
+  border: .2rem solid red ;
+  margin: .2em ;
+  padding: .2em ;
+}
+
+.ruleWrapper {
+  background-color: lightpink;
+  border: .2rem solid white;
+  /*
+  border: .2rem solid red ;
+  border-spacing: .2rem;
+  border-style: groove;
+  */
+  margin: .2em ;
+  padding: .2em ;
+}
+
+.groupruleWrapper {
+  background-color: lightgoldenrodyellow;
+  /*
+  border: .2rem solid goldenrod ;
+  border-spacing: .2rem;
+  border-style: groove;
+  */
+  margin: .4em solid goldenrod;
+  border: .2rem solid white ;
+  padding: .2em ;
+}
+
+#groupruleWrapper {
+  border: .2rem solid goldenrod ;
+  margin: .2em ;
+  padding: .2em ;
+}
+
+
+
+
+.questiontitle {
+  padding: .25rem;
+  color: black;
+}
+
+.ruletitle {
+  padding: .25rem;
+   color: red;
+}
+
+.formtitlegrouprule {
+  padding: .25rem;
+  border: .2rem solid goldenrod;
+  text-align: center;
+  margin: .3rem;
+  color: goldenrod;
+  position: fixed ;
+  top: 0px ;
+  right: 0px ;
+  left:  0px ;
+}
+
+.buttongrouprule {
+  /*padding: .25rem; */
+  border: .01rem solid goldenrod;
+/*  text-align: center; */
+/*  margin: .3rem; */
+  /*color: goldenrod; */
+}
+
+/*button, input[type="button"], input[type="submit"] { 
+  /*
+  color:#050; 
+  font: bold 84% 'trebuchet ms',helvetica,sans-serif; 
+  background-color:#fed; 
+  border:1px solid; 
+  border-color: #696 #363 #363 #696; 
+  */
+  /*display: flex;
+  flex-wrap: wrap;
+} */
+
+
+
+.formtitlerule {
+  padding: .25rem;
+  border: .2rem solid red;
+  text-align: center;
+  margin: .3rem;
+  color: red;
+  position: fixed ;
+  top: 0px ;
+  right: 0px ;
+  left:  0px ;
+}
+.formtitlerule2 {
+  padding: .9rem;
+  border: .05rem solid red;
+  /*
+  border: .01rem solid red;
+  padding: .9rem;
+  margin: .2rem;
+  margin: .2rem;
+  color: red; */
+}
+.btnmargin {
+  margin: .5rem;
+}
+.formtitleStart {
+/*
+  position: absolute;
+  top: 10px ;
+  position: fixed ;
+  top: auto;
+  bottom: auto;
+top: 0px ;
+    position: fixed ;
+  top: -5px ;
+  width: 100% ;
+  height: auto;
+  */
+  padding: .25rem;
+  border: .2rem solid purple;
+  text-align: center;
+  margin: .3rem;
+  color: purple ;
+  background-color: white;
+  position: fixed ;
+  top: 0px ;
+  right: 0px ;
+  left:  0px ;
+/*  background-color: palegoldenrod; */
+}
+.hidestart {
+/*  visibility: hidden; */
+  display: none;
+}
+.boldalways {
+  /*  visibility: hidden; */
+    font-weight: bolder;
+  }
+  
+.hidealways {
+  /*  visibility: hidden; */
+    display: none;
+    /* max-height: 0px; overflow: hidden; */
+  }
+  .hidealways2 {
+    /*  visibility: hidden; */
+      display: none;
+    }
+#testForChange {
+  /*  visibility: hidden; */
+    display: none;
+  }

@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Authors</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="design_system.css">
+    <link rel="stylesheet" href="modern_styles.css">
+    
+    <!-- jQuery -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    
+    <!-- IndexedDB Setup -->
+    <script src="setupIndexedDB.js"></script>
+    
+    <style>
+        .page-header {
+            background: linear-gradient(135deg, #6f42c1 0%, #5a32a3 100%);
+            color: white;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border-radius: 8px;
+        }
+        .author-card {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border-left: 4px solid #6f42c1;
+        }
+        .author-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transform: translateY(-2px);
+        }
+        .author-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .author-name {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #333;
+        }
+        .author-meta {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+        .author-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        .stat-item {
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #6f42c1;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 0.85rem;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin: 2rem 0;
+        }
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+        .filter-bar {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .nav-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .stats-bar {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .stat-box {
+            flex: 1;
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #6f42c1;
+        }
+        .hidealways {
+            display: none !important;
+        }
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 2rem;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        .modal-header h2 {
+            margin: 0;
+            color: #6f42c1;
+        }
+        .close {
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            color: #666;
+            line-height: 1;
+        }
+        .close:hover {
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #333;
+        }
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        .form-group textarea {
+            min-height: 100px;
+            font-family: inherit;
+        }
+        .alert {
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 2rem;">
+        
+        <a href="ManageRules.html" class="nav-back btn btn-outline-secondary">
+            ← Back to All Rules
+        </a>
+
+        <div class="page-header">
+            <h1 style="margin: 0 0 0.5rem 0;">👤 Manage Authors</h1>
+            <p style="margin: 0; opacity: 0.9;">Add, edit, and manage authors in your system</p>
+        </div>
+
+        <div class="stats-bar">
+            <div class="stat-box">
+                <div class="stat-number" id="totalAuthors">0</div>
+                <div class="stat-label">Total Authors</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="totalRules">0</div>
+                <div class="stat-label">Total Rules</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="totalCollections">0</div>
+                <div class="stat-label">Total Collections</div>
+            </div>
+        </div>
+
+        <div class="filter-bar">
+            <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 250px;">
+                    <input type="text" id="searchInput" class="form-control" placeholder="🔍 Search authors..." oninput="filterAuthors()">
+                </div>
+                <div>
+                    <button class="btn btn-primary" onclick="refreshList()">🔄 Refresh</button>
+                    <button class="btn btn-success" onclick="openAddAuthorModal()">➕ Add New Author</button>
+                    <button class="btn btn-info" onclick="verifyDatabaseContents()">🔍 Verify Database</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="authorsContainer">
+            <!-- Authors will be loaded here -->
+        </div>
+
+        <div id="emptyState" class="empty-state hidealways">
+            <div class="empty-state-icon">👤</div>
+            <h3>No Authors Found</h3>
+            <p style="color: #666; margin: 1rem 0;">Add your first author to get started!</p>
+            <button class="btn btn-success" onclick="openAddAuthorModal()">Add Author</button>
+        </div>
+
+    </div>
+
+    <!-- Add/Edit Author Modal -->
+    <div id="authorModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">➕ Add New Author</h2>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            
+            <div id="alertContainer"></div>
+
+            <form id="authorForm" onsubmit="saveAuthor(event)">
+                <div class="form-group">
+                    <label for="authorName">Author Name: <span style="color: red;">*</span></label>
+                    <input type="text" id="authorName" required placeholder="e.g., JSM">
+                    <small style="color: #666;">Unique identifier for the author</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="authorFullName">Full Name:</label>
+                    <input type="text" id="authorFullName" placeholder="e.g., John Smith">
+                    <small style="color: #666;">Full name (optional)</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="authorEmail">Email:</label>
+                    <input type="email" id="authorEmail" placeholder="e.g., john@example.com">
+                    <small style="color: #666;">Email address (optional)</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="authorDescription">Description:</label>
+                    <textarea id="authorDescription" placeholder="Additional notes about this author..."></textarea>
+                </div>
+
+                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn btn-success">💾 Save Author</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let allAuthors = [];
+        let allRules = [];
+        let isEditMode = false;
+        let editingAuthorName = null;
+
+        // Load authors on page load
+        window.addEventListener('DOMContentLoaded', async function() {
+            console.log("=== ManageAuthors.html Page Loaded ===");
+            
+            // Wait for database initialization
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Ensure authorMetadata store exists
+            await ensureAuthorMetadataStore();
+            
+            loadAuthors();
+        });
+
+        async function ensureAuthorMetadataStore() {
+            try {
+                const db = await openDB();
+                
+                // Check if authorMetadata store exists
+                if (!db.objectStoreNames.contains('authorMetadata')) {
+                    console.log('authorMetadata store does not exist, creating it...');
+                    const currentVersion = db.version;
+                    db.close();
+                    
+                    // Reopen with version upgrade
+                    return new Promise((resolve, reject) => {
+                        const request = indexedDB.open('authorExcuTrust', currentVersion + 1);
+                        
+                        request.onupgradeneeded = function(event) {
+                            const upgradedDb = event.target.result;
+                            if (!upgradedDb.objectStoreNames.contains('authorMetadata')) {
+                                const store = upgradedDb.createObjectStore('authorMetadata', { keyPath: 'authorName' });
+                                console.log('✓ authorMetadata store created');
+                            }
+                        };
+                        
+                        request.onsuccess = function() {
+                            console.log('✓ Database upgraded successfully');
+                            request.result.close();
+                            resolve();
+                        };
+                        
+                        request.onerror = function() {
+                            console.error('Error upgrading database:', request.error);
+                            reject(request.error);
+                        };
+                    });
+                } else {
+                    console.log('✓ authorMetadata store exists');
+                    db.close();
+                }
+            } catch (error) {
+                console.error('Error checking authorMetadata store:', error);
+            }
+        }
+
+        async function loadAuthors() {
+            try {
+                console.log("=== LOADING AUTHORS ===");
+                const db = await openDB();
+                
+                // Check if authorMetadata store exists
+                const hasAuthorStore = db.objectStoreNames.contains('authorMetadata');
+                
+                // Get author metadata store
+                const stores = hasAuthorStore ? ['ruleStore', 'authorMetadata'] : ['ruleStore'];
+                const tx = db.transaction(stores, 'readonly');
+                const ruleStore = tx.objectStore('ruleStore');
+                const authorStore = hasAuthorStore ? tx.objectStore('authorMetadata') : null;
+                
+                // Get all rules to calculate stats
+                const allRulesData = await new Promise((resolve, reject) => {
+                    const request = ruleStore.getAll();
+                    request.onsuccess = () => resolve(request.result || []);
+                    request.onerror = () => reject(request.error);
+                });
+                
+                // Get author metadata
+                const authorMetadata = authorStore ? await new Promise((resolve, reject) => {
+                    const request = authorStore.getAll();
+                    request.onsuccess = () => resolve(request.result || []);
+                    request.onerror = () => reject(request.error);
+                }) : [];
+                
+                db.close();
+                
+                allRules = allRulesData;
+                console.log(`Loaded ${allRules.length} total records`);
+                
+                // Extract unique authors from rules
+                const authorsMap = new Map();
+                
+                allRules.forEach(rule => {
+                    const authorName = rule.ruleAuthor || rule.groupruleAuthor;
+                    if (authorName) {
+                        if (!authorsMap.has(authorName)) {
+                            authorsMap.set(authorName, {
+                                name: authorName,
+                                displayRules: 0,
+                                collections: 0,
+                                totalRules: 0,
+                                fullName: '',
+                                email: '',
+                                description: '',
+                                createdDate: Date.now(),
+                                modifiedDate: Date.now()
+                            });
+                        }
+                        
+                        const author = authorsMap.get(authorName);
+                        author.totalRules++;
+                        
+                        if (rule.keyPathValue && rule.keyPathValue[0] === 'trueruleStore') {
+                            author.displayRules++;
+                        } else if (rule.keyPathValue && rule.keyPathValue[0] === 'groupruleStore') {
+                            author.collections++;
+                        }
+                    }
+                });
+                
+                // Merge with stored metadata and add authors without rules
+                authorMetadata.forEach(meta => {
+                    if (authorsMap.has(meta.authorName)) {
+                        // Update existing author with metadata
+                        const author = authorsMap.get(meta.authorName);
+                        author.fullName = meta.fullName || '';
+                        author.email = meta.email || '';
+                        author.description = meta.description || '';
+                        author.createdDate = meta.createdDate || Date.now();
+                        author.modifiedDate = meta.modifiedDate || Date.now();
+                    } else {
+                        // Add author who has no rules yet
+                        authorsMap.set(meta.authorName, {
+                            name: meta.authorName,
+                            displayRules: 0,
+                            collections: 0,
+                            totalRules: 0,
+                            fullName: meta.fullName || '',
+                            email: meta.email || '',
+                            description: meta.description || '',
+                            createdDate: meta.createdDate || Date.now(),
+                            modifiedDate: meta.modifiedDate || Date.now()
+                        });
+                    }
+                });
+                
+                allAuthors = Array.from(authorsMap.values()).sort((a, b) => 
+                    a.name.localeCompare(b.name)
+                );
+                
+                console.log(`Found ${allAuthors.length} unique authors (${authorMetadata.length} from metadata, ${authorsMap.size - authorMetadata.length} from rules)`);
+                
+                updateStats();
+                displayAuthors(allAuthors);
+                
+            } catch (error) {
+                console.error("Error loading authors:", error);
+                showEmptyState("Error loading authors from database.");
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('totalAuthors').textContent = allAuthors.length;
+            const displayRules = allRules.filter(r => r.keyPathValue && r.keyPathValue[0] === 'trueruleStore');
+            const collections = allRules.filter(r => r.keyPathValue && r.keyPathValue[0] === 'groupruleStore');
+            document.getElementById('totalRules').textContent = displayRules.length;
+            document.getElementById('totalCollections').textContent = collections.length;
+        }
+
+        function displayAuthors(authors) {
+            const container = document.getElementById('authorsContainer');
+            const emptyState = document.getElementById('emptyState');
+            
+            if (authors.length === 0) {
+                container.innerHTML = '';
+                emptyState.classList.remove('hidealways');
+                return;
+            }
+            
+            emptyState.classList.add('hidealways');
+            
+            container.innerHTML = authors.map(author => `
+                <div class="author-card">
+                    <div class="author-header">
+                        <div>
+                            <div class="author-name">👤 ${escapeHtml(author.name)}</div>
+                            ${author.fullName ? `<div class="author-meta">Full Name: ${escapeHtml(author.fullName)}</div>` : ''}
+                            ${author.email ? `<div class="author-meta">📧 ${escapeHtml(author.email)}</div>` : ''}
+                        </div>
+                        <div class="action-buttons">
+                            <button class="btn btn-sm btn-primary" onclick="editAuthor('${escapeHtml(author.name)}')">
+                                ✏️ Edit
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteAuthor('${escapeHtml(author.name)}')">
+                                🗑️ Delete
+                            </button>
+                        </div>
+                    </div>
+                    
+                    ${author.description ? `
+                        <div style="padding: 1rem; background: #f8f9fa; border-radius: 4px; margin-bottom: 1rem;">
+                            <strong>Description:</strong> ${escapeHtml(author.description)}
+                        </div>
+                    ` : ''}
+                    
+                    <div class="author-stats">
+                        <div class="stat-item">
+                            <div class="stat-value">${author.displayRules}</div>
+                            <div class="stat-label">Display Rules</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${author.collections}</div>
+                            <div class="stat-label">Collections</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${author.totalRules}</div>
+                            <div class="stat-label">Total Items</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterAuthors() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            
+            if (!searchTerm) {
+                displayAuthors(allAuthors);
+                return;
+            }
+            
+            const filtered = allAuthors.filter(author => 
+                author.name.toLowerCase().includes(searchTerm) ||
+                (author.fullName && author.fullName.toLowerCase().includes(searchTerm)) ||
+                (author.email && author.email.toLowerCase().includes(searchTerm)) ||
+                (author.description && author.description.toLowerCase().includes(searchTerm))
+            );
+            
+            displayAuthors(filtered);
+        }
+
+        function openAddAuthorModal() {
+            isEditMode = false;
+            editingAuthorName = null;
+            document.getElementById('modalTitle').textContent = '➕ Add New Author';
+            document.getElementById('authorName').disabled = false;
+            document.getElementById('authorForm').reset();
+            document.getElementById('alertContainer').innerHTML = '';
+            document.getElementById('authorModal').style.display = 'block';
+        }
+
+        function editAuthor(authorName) {
+            isEditMode = true;
+            editingAuthorName = authorName;
+            
+            const author = allAuthors.find(a => a.name === authorName);
+            if (!author) return;
+            
+            document.getElementById('modalTitle').textContent = '✏️ Edit Author';
+            document.getElementById('authorName').value = author.name;
+            document.getElementById('authorName').disabled = true; // Can't change author name
+            document.getElementById('authorFullName').value = author.fullName || '';
+            document.getElementById('authorEmail').value = author.email || '';
+            document.getElementById('authorDescription').value = author.description || '';
+            document.getElementById('alertContainer').innerHTML = '';
+            document.getElementById('authorModal').style.display = 'block';
+        }
+
+        async function saveAuthor(event) {
+            event.preventDefault();
+            
+            try {
+                const authorName = document.getElementById('authorName').value.trim().toUpperCase();
+                const fullName = document.getElementById('authorFullName').value.trim();
+                const email = document.getElementById('authorEmail').value.trim();
+                const description = document.getElementById('authorDescription').value.trim();
+                
+                console.log('=== SAVE AUTHOR STARTED ===');
+                console.log('Author Name:', authorName);
+                console.log('Full Name:', fullName);
+                
+                if (!authorName) {
+                    showModalAlert('⚠️ Author name is required', 'warning');
+                    return;
+                }
+                
+                // Check if author exists when adding new
+                if (!isEditMode && allAuthors.some(a => a.name === authorName)) {
+                    showModalAlert('⚠️ Author already exists. Use Edit instead.', 'warning');
+                    return;
+                }
+                
+                const authorData = {
+                    authorName: authorName,
+                    fullName: fullName,
+                    email: email,
+                    description: description,
+                    createdDate: isEditMode ? 
+                        (allAuthors.find(a => a.name === authorName)?.createdDate || Date.now()) : 
+                        Date.now(),
+                    modifiedDate: Date.now()
+                };
+                
+                console.log('Opening database...');
+                const db = await openDB();
+                console.log('Database opened. Version:', db.version);
+                console.log('Available stores:', Array.from(db.objectStoreNames));
+                
+                // Check if authorMetadata store exists
+                if (!db.objectStoreNames.contains('authorMetadata')) {
+                    console.error('❌ authorMetadata store NOT FOUND!');
+                    db.close();
+                    showModalAlert('⚠️ Database store missing! Attempting to create it...', 'warning');
+                    
+                    // Try to ensure store exists
+                    await ensureAuthorMetadataStore();
+                    showModalAlert('Please try again after the page reloads.', 'info');
+                    setTimeout(() => location.reload(), 2000);
+                    return;
+                }
+                
+                console.log('✓ authorMetadata store exists');
+                const tx = db.transaction('authorMetadata', 'readwrite');
+                const store = tx.objectStore('authorMetadata');
+                
+                console.log('Saving author data:', authorData);
+                
+                // Use put to insert or update
+                await new Promise((resolve, reject) => {
+                    const request = store.put(authorData);
+                    request.onsuccess = () => {
+                        console.log('✓ Author data saved successfully');
+                        resolve();
+                    };
+                    request.onerror = () => {
+                        console.error('❌ Error saving author:', request.error);
+                        reject(request.error);
+                    };
+                });
+                
+                // Wait for transaction to complete
+                await new Promise((resolve, reject) => {
+                    tx.oncomplete = () => {
+                        console.log('✓ Transaction completed');
+                        resolve();
+                    };
+                    tx.onerror = () => {
+                        console.error('❌ Transaction error:', tx.error);
+                        reject(tx.error);
+                    };
+                });
+                
+                db.close();
+                console.log('=== SAVE AUTHOR COMPLETED ===');
+                
+                showModalAlert(`✅ Author ${isEditMode ? 'updated' : 'added'} successfully!`, 'success');
+                
+                setTimeout(() => {
+                    closeModal();
+                    refreshList();
+                }, 1000);
+                
+            } catch (error) {
+                console.error('=== SAVE AUTHOR FAILED ===');
+                console.error('Error:', error);
+                showModalAlert('❌ Error: ' + error.message, 'danger');
+            }
+        }
+
+        async function deleteAuthor(authorName) {
+            const author = allAuthors.find(a => a.name === authorName);
+            if (!author) return;
+            
+            // Check if author has rules or collections
+            if (author.totalRules > 0) {
+                if (!confirm(`⚠️ Warning: ${authorName} has ${author.totalRules} rule(s) and/or collection(s).\n\nDeleting this author will NOT delete their rules/collections, but will remove the author metadata.\n\nContinue?`)) {
+                    return;
+                }
+            } else {
+                if (!confirm(`Delete author "${authorName}"?`)) {
+                    return;
+                }
+            }
+            
+            try {
+                const db = await openDB();
+                
+                // Check if authorMetadata store exists
+                if (!db.objectStoreNames.contains('authorMetadata')) {
+                    db.close();
+                    alert('⚠️ Database needs to be upgraded. Please refresh the page.');
+                    return;
+                }
+                
+                const tx = db.transaction('authorMetadata', 'readwrite');
+                const store = tx.objectStore('authorMetadata');
+                
+                console.log('Deleting author:', authorName);
+                
+                await new Promise((resolve, reject) => {
+                    const request = store.delete(authorName);
+                    request.onsuccess = () => {
+                        console.log('✓ Author deleted successfully');
+                        resolve();
+                    };
+                    request.onerror = () => {
+                        console.error('Error deleting author:', request.error);
+                        reject(request.error);
+                    };
+                });
+                
+                // Wait for transaction to complete
+                await new Promise((resolve, reject) => {
+                    tx.oncomplete = () => {
+                        console.log('✓ Delete transaction completed');
+                        resolve();
+                    };
+                    tx.onerror = () => {
+                        console.error('Delete transaction error:', tx.error);
+                        reject(tx.error);
+                    };
+                });
+                
+                db.close();
+                
+                alert('✅ Author deleted successfully!');
+                refreshList();
+                
+            } catch (error) {
+                console.error('Error deleting author:', error);
+                alert('❌ Error: ' + error.message);
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('authorModal').style.display = 'none';
+        }
+
+        function refreshList() {
+            console.log('Refreshing author list...');
+            loadAuthors();
+        }
+
+        async function verifyDatabaseContents() {
+            console.log('=== VERIFYING DATABASE CONTENTS ===');
+            try {
+                const db = await openDB();
+                console.log('Database version:', db.version);
+                console.log('Object stores:', Array.from(db.objectStoreNames));
+                
+                if (db.objectStoreNames.contains('authorMetadata')) {
+                    const tx = db.transaction('authorMetadata', 'readonly');
+                    const store = tx.objectStore('authorMetadata');
+                    const allAuthors = await new Promise((resolve, reject) => {
+                        const request = store.getAll();
+                        request.onsuccess = () => resolve(request.result || []);
+                        request.onerror = () => reject(request.error);
+                    });
+                    console.log('Authors in database:', allAuthors);
+                } else {
+                    console.error('authorMetadata store does not exist!');
+                }
+                
+                db.close();
+            } catch (error) {
+                console.error('Error verifying database:', error);
+            }
+        }
+
+        function showEmptyState(message) {
+            const container = document.getElementById('authorsContainer');
+            container.innerHTML = '';
+            const emptyState = document.getElementById('emptyState');
+            emptyState.querySelector('p').textContent = message;
+            emptyState.classList.remove('hidealways');
+        }
+
+        function showModalAlert(message, type = 'info') {
+            const alertContainer = document.getElementById('alertContainer');
+            alertContainer.innerHTML = `
+                <div class="alert alert-${type}">
+                    ${message}
+                </div>
+            `;
+        }
+
+        async function openDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('authorExcuTrust');
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('authorModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+    </script>
+</body>
+</html>

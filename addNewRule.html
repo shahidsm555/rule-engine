@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add New Rule - Quick Form</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container-main {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        .form-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #007bff;
+        }
+        .form-section.collection {
+            border-left-color: #28a745;
+        }
+        .rule-preview {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .status-message {
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .status-message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status-message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .logic-type-container {
+            background: #e7f3ff;
+            border: 1px solid #2196F3;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+        }
+        .child-rules {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+        }
+        .child-rule-item {
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .btn-remove {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .hidealways { display: none !important; }
+        h1 { color: #333; margin-bottom: 10px; }
+        .subtitle { color: #666; margin-bottom: 30px; }
+    </style>
+</head>
+<body>
+    <div class="container-main">
+        <h1>🆕 Add New Rule</h1>
+        <p class="subtitle">Create a new Display Rule or Rule Collection with enhanced logic types</p>
+
+        <!-- Rule Type Selection -->
+        <div class="form-section">
+            <h4>1. Select Rule Type</h4>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="ruleType" id="typeDisplayRule" value="trueruleStore" checked onchange="updateFormType()">
+                <label class="form-check-label" for="typeDisplayRule">
+                    <strong>📄 Display Rule</strong> - A single condition that controls when content is shown
+                </label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="ruleType" id="typeCollection" value="groupruleStore" onchange="updateFormType()">
+                <label class="form-check-label" for="typeCollection">
+                    <strong>📁 Rule Collection</strong> - A group of rules with logic (ALL/ANY/COUNT/PERCENT)
+                </label>
+            </div>
+        </div>
+
+        <!-- Basic Information -->
+        <div class="form-section" id="basicInfo">
+            <h4>2. Basic Information</h4>
+            <div class="form-group">
+                <label for="ruleAuthor"><strong>Author:</strong></label>
+                <select class="form-control" id="ruleAuthor">
+                    <option value="">-- Select Author --</option>
+                </select>
+                <small class="form-text text-muted">Select an author from the list (or add new authors in Manage Authors)</small>
+            </div>
+            <div class="form-group">
+                <label for="ruleID"><strong>Rule ID:</strong> <span style="color: #28a745;">(Auto-generated)</span></label>
+                <input type="text" class="form-control" id="ruleID" placeholder="Will be auto-generated from description" style="text-transform: uppercase; background-color: #e9ecef;" disabled readonly>
+                <small class="form-text text-muted">Automatically generated from description (UPPERCASE with underscores)</small>
+            </div>
+            <div class="form-group">
+                <label for="ruleDescription"><strong>Description/Title:</strong></label>
+                <textarea class="form-control" id="ruleDescription" rows="2" placeholder="e.g., User profile must be 100% complete"></textarea>
+                <small class="form-text text-muted">Describe what this rule does</small>
+            </div>
+        </div>
+
+        <!-- Collection Logic (Only for Rule Collections) -->
+        <div class="form-section collection hidealways" id="collectionLogic">
+            <h4>3. Rule Evaluation Logic</h4>
+            <p style="margin-bottom: 15px;">Choose how child rules should be evaluated:</p>
+            
+            <div class="logic-type-container">
+                <div class="form-group">
+                    <label for="ruleLogicType"><strong>Select Logic Type:</strong></label>
+                    <select id="ruleLogicType" class="form-control" onchange="updateLogicDisplay()">
+                        <option value="all">All rules must be true (AND)</option>
+                        <option value="any">Any rule must be true (OR)</option>
+                        <option value="count">At least N rules must be true</option>
+                        <option value="percent">At least X% of rules must be true</option>
+                    </select>
+                </div>
+                
+                <div id="countInput" class="form-group hidealways">
+                    <label for="minRuleCount"><strong>Minimum Rules Required:</strong></label>
+                    <input type="number" id="minRuleCount" class="form-control" min="1" value="2" style="max-width: 150px;" onchange="updateLogicDisplay()">
+                </div>
+                
+                <div id="percentInput" class="form-group hidealways">
+                    <label for="minRulePercent"><strong>Minimum Percentage Required:</strong></label>
+                    <input type="number" id="minRulePercent" class="form-control" min="1" max="100" value="50" style="max-width: 150px;" onchange="updateLogicDisplay()">
+                    <small class="form-text text-muted">Enter value between 1-100</small>
+                </div>
+                
+                <div class="alert alert-success" style="margin-top: 15px; margin-bottom: 0;">
+                    <span id="logicDisplayText">Display when <strong>all</strong> child rules are true</span>
+                </div>
+            </div>
+
+            <!-- Child Rules -->
+            <div class="child-rules">
+                <h5>Child Rules:</h5>
+                <div id="childRulesList">
+                    <p style="color: #666;">No child rules added yet</p>
+                </div>
+                <div style="margin-top: 15px;">
+                    <h6>Add Child Rule:</h6>
+                    <div class="form-row">
+                        <div class="col-md-8">
+                            <select class="form-control" id="childRuleSelect">
+                                <option value="">-- Select a Display Rule --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-success btn-block" onclick="addChildRule()">➕ Add Rule</button>
+                        </div>
+                    </div>
+                    <small class="form-text text-muted">Select from existing Display Rules (Collections cannot be added as children)</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div style="text-align: center; margin: 30px 0;">
+            <button class="btn btn-primary btn-lg" onclick="createRule()">💾 Create Rule</button>
+            <button class="btn btn-secondary btn-lg" onclick="previewRule()">👁️ Preview JSON</button>
+            <button class="btn btn-outline-secondary" onclick="resetForm()">🔄 Reset Form</button>
+            <button class="btn btn-outline-danger" onclick="closeForm()">✖️ Close</button>
+        </div>
+
+        <!-- Status Message -->
+        <div id="statusMessage" style="display: none;"></div>
+
+        <!-- Preview -->
+        <div id="previewSection" style="display: none;">
+            <h5>Rule Preview (JSON):</h5>
+            <div class="rule-preview">
+                <pre id="previewContent"></pre>
+            </div>
+        </div>
+    </div>
+
+    <script src="setupIndexedDB.js"></script>
+    <script>
+        // Initialize database and load authors
+        window.addEventListener('load', async () => {
+            initialSetupIndexedDB();
+            console.log("Database initialized");
+            await loadAuthors();
+            // Generate initial Rule ID
+            generateRuleID();
+        });
+
+        let childRules = [];
+        let allAuthors = [];
+        let availableDisplayRules = [];
+
+        // Load authors and display rules from database
+        async function loadAuthors() {
+            try {
+                const db = await openDB();
+                
+                // Get all authors from both authorMetadata and existing rules
+                const stores = [];
+                if (db.objectStoreNames.contains('ruleStore')) stores.push('ruleStore');
+                if (db.objectStoreNames.contains('authorMetadata')) stores.push('authorMetadata');
+                
+                if (stores.length === 0) {
+                    console.log("No stores available");
+                    db.close();
+                    return;
+                }
+                
+                const tx = db.transaction(stores, 'readonly');
+                
+                // Get authors from metadata store
+                let authorMetadata = [];
+                if (db.objectStoreNames.contains('authorMetadata')) {
+                    const authorStore = tx.objectStore('authorMetadata');
+                    authorMetadata = await new Promise((resolve, reject) => {
+                        const request = authorStore.getAll();
+                        request.onsuccess = () => resolve(request.result || []);
+                        request.onerror = () => reject(request.error);
+                    });
+                }
+                
+                // Get unique authors and display rules
+                let ruleAuthors = new Set();
+                if (db.objectStoreNames.contains('ruleStore')) {
+                    const ruleStore = tx.objectStore('ruleStore');
+                    const allRules = await new Promise((resolve, reject) => {
+                        const request = ruleStore.getAll();
+                        request.onsuccess = () => resolve(request.result || []);
+                        request.onerror = () => reject(request.error);
+                    });
+                    
+                    // Extract authors and filter display rules
+                    availableDisplayRules = [];
+                    allRules.forEach(rule => {
+                        const authorName = rule.ruleAuthor || rule.groupruleAuthor;
+                        if (authorName) ruleAuthors.add(authorName);
+                        
+                        // Only add Display Rules (trueruleStore) to available list
+                        if (rule.keyPathValue && rule.keyPathValue[0] === 'trueruleStore') {
+                            availableDisplayRules.push({
+                                author: rule.ruleAuthor,
+                                id: rule.ruleID,
+                                description: rule.ruleContent || rule.ruleContentInnerText || 'No description'
+                            });
+                        }
+                    });
+                    
+                    // Sort display rules by author then ID
+                    availableDisplayRules.sort((a, b) => {
+                        if (a.author !== b.author) return a.author.localeCompare(b.author);
+                        return a.id.localeCompare(b.id);
+                    });
+                }
+                
+                // Combine authors from both sources
+                const authorsSet = new Set();
+                authorMetadata.forEach(author => authorsSet.add(author.authorName));
+                ruleAuthors.forEach(author => authorsSet.add(author));
+                
+                allAuthors = Array.from(authorsSet).sort();
+                
+                db.close();
+                
+                console.log(`Loaded ${allAuthors.length} authors:`, allAuthors);
+                console.log(`Loaded ${availableDisplayRules.length} display rules for selection`);
+                
+                // Populate dropdowns
+                populateAuthorDropdowns();
+                populateChildRuleDropdown();
+                
+            } catch (error) {
+                console.error("Error loading authors:", error);
+            }
+        }
+
+        function populateAuthorDropdowns() {
+            const mainAuthorSelect = document.getElementById('ruleAuthor');
+            
+            // Clear existing options except the first one
+            mainAuthorSelect.innerHTML = '<option value="">-- Select Author --</option>';
+            
+            // Add author options
+            allAuthors.forEach(author => {
+                const option1 = document.createElement('option');
+                option1.value = author;
+                option1.textContent = author;
+                mainAuthorSelect.appendChild(option1);
+            });
+            
+            // Select first author by default if available
+            if (allAuthors.length > 0) {
+                mainAuthorSelect.value = allAuthors[0];
+            }
+        }
+
+        function populateChildRuleDropdown() {
+            const childRuleSelect = document.getElementById('childRuleSelect');
+            
+            // Clear existing options except the first one
+            childRuleSelect.innerHTML = '<option value="">-- Select a Display Rule --</option>';
+            
+            if (availableDisplayRules.length === 0) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = '(No Display Rules available - create some first)';
+                option.disabled = true;
+                childRuleSelect.appendChild(option);
+                return;
+            }
+            
+            // Add display rule options
+            availableDisplayRules.forEach(rule => {
+                const option = document.createElement('option');
+                option.value = JSON.stringify({ author: rule.author, id: rule.id });
+                option.textContent = `${rule.author} / ${rule.id} - ${rule.description.substring(0, 50)}${rule.description.length > 50 ? '...' : ''}`;
+                childRuleSelect.appendChild(option);
+            });
+        }
+
+        async function openDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('authorExcuTrust');
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        function generateRuleID() {
+            const ruleIDField = document.getElementById('ruleID');
+            
+            // Generate a unique numeric ID based on timestamp
+            const timestamp = Date.now();
+            const ruleID = 'RULE_' + timestamp;
+            
+            ruleIDField.value = ruleID;
+        }
+
+        function updateFormType() {
+            const ruleType = document.querySelector('input[name="ruleType"]:checked').value;
+            const collectionLogic = document.getElementById('collectionLogic');
+            
+            if (ruleType === 'groupruleStore') {
+                collectionLogic.classList.remove('hidealways');
+            } else {
+                collectionLogic.classList.add('hidealways');
+            }
+        }
+
+        function updateLogicDisplay() {
+            const logicType = document.getElementById('ruleLogicType').value;
+            const countInput = document.getElementById('countInput');
+            const percentInput = document.getElementById('percentInput');
+            const displayText = document.getElementById('logicDisplayText');
+            
+            countInput.classList.add('hidealways');
+            percentInput.classList.add('hidealways');
+            
+            switch(logicType) {
+                case 'all':
+                    displayText.innerHTML = 'Display when <strong>all</strong> child rules are true';
+                    break;
+                case 'any':
+                    displayText.innerHTML = 'Display when <strong>any</strong> child rule is true';
+                    break;
+                case 'count':
+                    countInput.classList.remove('hidealways');
+                    const count = document.getElementById('minRuleCount').value;
+                    displayText.innerHTML = `Display when at least <strong>${count}</strong> child rule(s) are true`;
+                    break;
+                case 'percent':
+                    percentInput.classList.remove('hidealways');
+                    const percent = document.getElementById('minRulePercent').value;
+                    displayText.innerHTML = `Display when at least <strong>${percent}%</strong> of child rules are true`;
+                    break;
+            }
+        }
+
+        function addChildRule() {
+            const childRuleSelect = document.getElementById('childRuleSelect');
+            const selectedValue = childRuleSelect.value;
+            
+            if (!selectedValue) {
+                alert('Please select a Display Rule from the dropdown');
+                return;
+            }
+            
+            // Parse the selected rule
+            const ruleData = JSON.parse(selectedValue);
+            const author = ruleData.author;
+            const id = ruleData.id;
+            
+            // Check if already exists
+            if (childRules.some(r => r.author === author && r.id === id)) {
+                alert('This rule has already been added');
+                return;
+            }
+            
+            childRules.push({ author, id });
+            updateChildRulesList();
+            
+            // Reset dropdown
+            childRuleSelect.value = '';
+        }
+
+        function removeChildRule(index) {
+            childRules.splice(index, 1);
+            updateChildRulesList();
+        }
+
+        function updateChildRulesList() {
+            const listDiv = document.getElementById('childRulesList');
+            
+            if (childRules.length === 0) {
+                listDiv.innerHTML = '<p style="color: #666;">No child rules added yet</p>';
+                return;
+            }
+            
+            let html = '';
+            childRules.forEach((rule, index) => {
+                html += `
+                    <div class="child-rule-item">
+                        <span><strong>${rule.author}</strong> / ${rule.id}</span>
+                        <button class="btn-remove" onclick="removeChildRule(${index})">✕ Remove</button>
+                    </div>
+                `;
+            });
+            
+            listDiv.innerHTML = html;
+        }
+
+        function buildRuleObject() {
+            const ruleType = document.querySelector('input[name="ruleType"]:checked').value;
+            const author = document.getElementById('ruleAuthor').value.trim();
+            const description = document.getElementById('ruleDescription').value.trim();
+            
+            if (!author) {
+                throw new Error('Please select an author from the dropdown');
+            }
+            if (!description) {
+                throw new Error('Please enter a description');
+            }
+            
+            // Auto-generate Rule ID if not already set
+            if (!document.getElementById('ruleID').value) {
+                generateRuleID();
+            }
+            const id = document.getElementById('ruleID').value.trim().toUpperCase();
+            
+            const baseRule = {
+                keyPathValue: [ruleType, 1, author, 1, id],
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            };
+            
+            if (ruleType === 'trueruleStore') {
+                return {
+                    ...baseRule,
+                    ruleContent: description,
+                    ruleContentInnerText: description,
+                    ruleAuthor: author,
+                    ruleID: id
+                };
+            } else {
+                // groupruleStore
+                if (childRules.length === 0) {
+                    throw new Error('Rule Collection must have at least one child rule');
+                }
+                
+                const logicType = document.getElementById('ruleLogicType').value;
+                const minCount = parseInt(document.getElementById('minRuleCount').value) || 1;
+                const minPercent = parseInt(document.getElementById('minRulePercent').value) || 50;
+                
+                return {
+                    ...baseRule,
+                    groupruleContent: description,
+                    groupruleContentInnerText: description,
+                    groupruleAuthor: author,
+                    groupruleID: id,
+                    ruleLogicType: logicType,
+                    minRuleCount: minCount,
+                    minRulePercent: minPercent,
+                    all0Any1True: logicType === 'any',
+                    allRowChoices: [],
+                    allArrayType: childRules.map(() => 'trueruleStore'),
+                    allArrayAuthor: childRules.map(r => r.author),
+                    allArrayID: childRules.map(r => r.id)
+                };
+            }
+        }
+
+        function previewRule() {
+            try {
+                const rule = buildRuleObject();
+                document.getElementById('previewContent').textContent = JSON.stringify(rule, null, 2);
+                document.getElementById('previewSection').style.display = 'block';
+                document.getElementById('previewSection').scrollIntoView({ behavior: 'smooth' });
+            } catch (error) {
+                showStatus(error.message, 'error');
+            }
+        }
+
+        function createRule() {
+            try {
+                const rule = buildRuleObject();
+                
+                // Open database and add rule
+                const database = "authorExcuTrust";
+                const databaseOpenRequest = indexedDB.open(database);
+                
+                databaseOpenRequest.onsuccess = () => {
+                    const db = databaseOpenRequest.result;
+                    const tx = db.transaction("ruleStore", "readwrite");
+                    const store = tx.objectStore("ruleStore");
+                    
+                    const addRequest = store.add(rule);
+                    
+                    addRequest.onsuccess = () => {
+                        console.log("Rule created successfully:", rule);
+                        const ruleType = rule.keyPathValue[0] === 'trueruleStore' ? 'Display Rule' : 'Rule Collection';
+                        showStatus(
+                            `✅ SUCCESS! ${ruleType} created:<br>` +
+                            `<strong>Author:</strong> ${rule.keyPathValue[2]}<br>` +
+                            `<strong>ID:</strong> ${rule.keyPathValue[4]}<br><br>` +
+                            `You can now use this rule in your application.`,
+                            'success'
+                        );
+                        
+                        // Clear form after success
+                        setTimeout(() => {
+                            if (confirm('Rule created successfully!\n\nWould you like to create another rule?')) {
+                                resetForm();
+                            } else {
+                                window.location.href = 'ManageRules.html';
+                            }
+                        }, 1500);
+                    };
+                    
+                    addRequest.onerror = (event) => {
+                        console.error("Error creating rule:", event);
+                        if (event.target.error.name === 'ConstraintError') {
+                            showStatus(
+                                `❌ ERROR: A rule with this Author/ID combination already exists!<br>` +
+                                `<strong>Author:</strong> ${rule.keyPathValue[2]}<br>` +
+                                `<strong>ID:</strong> ${rule.keyPathValue[4]}<br><br>` +
+                                `Please use a different ID or edit the existing rule.`,
+                                'error'
+                            );
+                        } else {
+                            showStatus('❌ Error creating rule: ' + event.target.error, 'error');
+                        }
+                    };
+                    
+                    tx.oncomplete = () => {
+                        db.close();
+                    };
+                };
+                
+                databaseOpenRequest.onerror = (event) => {
+                    console.error("Error opening database:", event);
+                    showStatus('❌ Error opening database', 'error');
+                };
+                
+            } catch (error) {
+                showStatus('❌ ' + error.message, 'error');
+            }
+        }
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.className = `status-message ${type}`;
+            statusDiv.innerHTML = message;
+            statusDiv.style.display = 'block';
+            statusDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function resetForm() {
+            // Reset to first author if available
+            const authorSelect = document.getElementById('ruleAuthor');
+            if (allAuthors.length > 0) {
+                authorSelect.value = allAuthors[0];
+            } else {
+                authorSelect.value = '';
+            }
+            document.getElementById('ruleID').value = '';
+            document.getElementById('ruleDescription').value = '';
+            document.getElementById('typeDisplayRule').checked = true;
+            childRules = [];
+            updateChildRulesList();
+            updateFormType();
+            document.getElementById('statusMessage').style.display = 'none';
+            document.getElementById('previewSection').style.display = 'none';
+            // Generate new Rule ID
+            generateRuleID();
+        }
+
+        function closeForm() {
+            if (confirm('Are you sure you want to close? Any unsaved changes will be lost.')) {
+                window.location.href = 'ManageRules.html';
+            }
+        }
+
+        // Child rules are selected from dropdown, no manual input needed
+    </script>
+</body>
+</html>

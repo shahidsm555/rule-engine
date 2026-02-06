@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Group Rule Display - Demo</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="questionGeneratorSelector.css">
+    <script src="setupIndexedDB.js"></script>
+    <style>
+        body { padding: 20px; background-color: #f5f5f5; }
+        .demo-container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .rule-item { padding: 15px; margin: 10px 0; background: #f8f9fa; border-left: 4px solid #007bff; border-radius: 5px; }
+        .rule-item.true { border-left-color: #28a745; background: #d4edda; }
+        .rule-item.false { border-left-color: #dc3545; background: #f8d7da; }
+        .evaluation-result { padding: 20px; margin: 20px 0; border-radius: 8px; font-size: 18px; font-weight: bold; }
+        .evaluation-result.pass { background: #d4edda; color: #155724; border: 2px solid #28a745; }
+        .evaluation-result.fail { background: #f8d7da; color: #721c24; border: 2px solid #dc3545; }
+        .test-controls { margin: 20px 0; padding: 20px; background: #e9ecef; border-radius: 8px; }
+        .hidealways { display: none !important; }
+        code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <h1 class="text-center mb-4">Enhanced Group Rule Display System</h1>
+        <p class="lead text-center">Demo: Flexible Rule Evaluation Logic (Updated 2026-01-29)</p>
+        
+        <hr class="my-4">
+        
+        <div class="alert alert-info">
+            <h5>Overview:</h5>
+            <p>Group Rules can now be evaluated using four different logic types:</p>
+            <ul>
+                <li><strong>ALL (AND):</strong> All rules must be true</li>
+                <li><strong>ANY (OR):</strong> At least one rule must be true</li>
+                <li><strong>COUNT:</strong> At least N rules must be true</li>
+                <li><strong>PERCENT:</strong> At least X% of rules must be true</li>
+            </ul>
+        </div>
+
+        <div class="container border border-info p-3 mb-3" style="background-color: #f0f8ff;">
+            <h5>Rule Evaluation Logic:</h5>
+            <div class="row mb-2">
+                <div class="col-12">
+                    <label for="ruleLogicType"><b>Select how rules should be evaluated:</b></label>
+                    <select id="ruleLogicType" class="form-control" onchange="updateGroupRuleLogicDisplay()" style="max-width: 300px;">
+                        <option value="all">All rules must be true (AND)</option>
+                        <option value="any">Any rule must be true (OR)</option>
+                        <option value="count">At least N rules must be true</option>
+                        <option value="percent">At least X% of rules must be true</option>
+                    </select>
+                </div>
+            </div>
+            <div id="ruleCountInput" class="row mb-2 hidealways">
+                <div class="col-12">
+                    <label for="minRuleCount">Minimum number of rules that must be true:</label>
+                    <input type="number" id="minRuleCount" class="form-control" min="1" value="2" onchange="onRuleCountChange()" style="max-width: 150px;">
+                </div>
+            </div>
+            <div id="rulePercentInput" class="row mb-2 hidealways">
+                <div class="col-12">
+                    <label for="minRulePercent">Minimum percentage of rules that must be true:</label>
+                    <input type="number" id="minRulePercent" class="form-control" min="1" max="100" value="50" onchange="onRulePercentChange()" style="max-width: 150px;">
+                    <small class="form-text text-muted">Enter a value between 1 and 100</small>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-12">
+                    <div class="alert alert-success" role="alert">
+                        <span id="ruleLogicDisplayText">Display only when <b><u>all</u></b> rules below are true.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h4 class="mt-4">Simulated Rules (Click to toggle True/False):</h4>
+        <div id="rulesContainer">
+            <div class="rule-item true" onclick="toggleRule(this)" data-rule-id="1">
+                <strong>Rule 1:</strong> User age is over 18 <span class="badge badge-success float-right">TRUE</span>
+            </div>
+            <div class="rule-item false" onclick="toggleRule(this)" data-rule-id="2">
+                <strong>Rule 2:</strong> User has verified email <span class="badge badge-danger float-right">FALSE</span>
+            </div>
+            <div class="rule-item true" onclick="toggleRule(this)" data-rule-id="3">
+                <strong>Rule 3:</strong> User completed profile <span class="badge badge-success float-right">TRUE</span>
+            </div>
+            <div class="rule-item false" onclick="toggleRule(this)" data-rule-id="4">
+                <strong>Rule 4:</strong> User accepted terms <span class="badge badge-danger float-right">FALSE</span>
+            </div>
+        </div>
+
+        <div class="test-controls">
+            <button class="btn btn-primary" onclick="evaluateRules()">Evaluate Group Rule</button>
+            <button class="btn btn-secondary" onclick="setAllRules(true)">Set All TRUE</button>
+            <button class="btn btn-secondary" onclick="setAllRules(false)">Set All FALSE</button>
+            <button class="btn btn-success" onclick="createSampleDataNow()" style="margin-left: 20px;">🔧 Create Missing Sample Data</button>
+        </div>
+
+        <div id="evaluationResult" class="evaluation-result hidealways">
+            <!-- Result will appear here -->
+        </div>
+
+        <hr class="my-4">
+
+        <div class="alert alert-secondary">
+            <h5>Implementation Notes:</h5>
+            <ul>
+                <li>The <code>evaluateGroupRule(groupRule, ruleResults)</code> function handles all logic types</li>
+                <li>Backward compatible with existing <code>all0Any1True</code> checkbox</li>
+                <li>New properties: <code>ruleLogicType</code>, <code>minRuleCount</code>, <code>minRulePercent</code></li>
+                <li>All changes saved in <code>2024-10-04GenerateRule.js</code></li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function updateGroupRuleLogicDisplay() {
+            console.log("function updateGroupRuleLogicDisplay() 2026-01-29");
+            const ruleLogicType = document.getElementById("ruleLogicType").value;
+            const ruleCountInput = document.getElementById("ruleCountInput");
+            const rulePercentInput = document.getElementById("rulePercentInput");
+            const displayText = document.getElementById("ruleLogicDisplayText");
+            
+            // Hide all input fields first
+            ruleCountInput.classList.add("hidealways");
+            rulePercentInput.classList.add("hidealways");
+            
+            switch(ruleLogicType) {
+                case "all":
+                    displayText.innerHTML = "Display only when <b><u>all</u></b> rules below are true.";
+                    break;
+                case "any":
+                    displayText.innerHTML = "Display when <b><u>any</u></b> rule below is true.";
+                    break;
+                case "count":
+                    ruleCountInput.classList.remove("hidealways");
+                    const countValue = document.getElementById("minRuleCount").value || "N";
+                    displayText.innerHTML = `Display when at least <b><u>${countValue}</u></b> rule(s) below are true.`;
+                    break;
+                case "percent":
+                    rulePercentInput.classList.remove("hidealways");
+                    const percentValue = document.getElementById("minRulePercent").value || "X";
+                    displayText.innerHTML = `Display when at least <b><u>${percentValue}%</u></b> of rules below are true.`;
+                    break;
+            }
+        }
+
+        function onRuleCountChange() {
+            console.log("function onRuleCountChange() 2026-01-29");
+            const countValue = document.getElementById("minRuleCount").value;
+            if (countValue && countValue > 0) {
+                document.getElementById("ruleLogicDisplayText").innerHTML = 
+                    `Display when at least <b><u>${countValue}</u></b> rule(s) below are true.`;
+            }
+        }
+
+        function onRulePercentChange() {
+            console.log("function onRulePercentChange() 2026-01-29");
+            const percentValue = document.getElementById("minRulePercent").value;
+            if (percentValue && percentValue > 0 && percentValue <= 100) {
+                document.getElementById("ruleLogicDisplayText").innerHTML = 
+                    `Display when at least <b><u>${percentValue}%</u></b> of rules below are true.`;
+            }
+        }
+
+        function toggleRule(element) {
+            const badge = element.querySelector('.badge');
+            if (element.classList.contains('true')) {
+                element.classList.remove('true');
+                element.classList.add('false');
+                badge.classList.remove('badge-success');
+                badge.classList.add('badge-danger');
+                badge.textContent = 'FALSE';
+            } else {
+                element.classList.remove('false');
+                element.classList.add('true');
+                badge.classList.remove('badge-danger');
+                badge.classList.add('badge-success');
+                badge.textContent = 'TRUE';
+            }
+        }
+
+        function setAllRules(state) {
+            const rules = document.querySelectorAll('.rule-item');
+            rules.forEach(rule => {
+                const badge = rule.querySelector('.badge');
+                if (state) {
+                    rule.classList.remove('false');
+                    rule.classList.add('true');
+                    badge.classList.remove('badge-danger');
+                    badge.classList.add('badge-success');
+                    badge.textContent = 'TRUE';
+                } else {
+                    rule.classList.remove('true');
+                    rule.classList.add('false');
+                    badge.classList.remove('badge-success');
+                    badge.classList.add('badge-danger');
+                    badge.textContent = 'FALSE';
+                }
+            });
+        }
+
+        function evaluateGroupRule(groupRule, ruleResults) {
+            console.log("function evaluateGroupRule(groupRule, ruleResults) { 2026-01-29");
+            
+            if (!ruleResults || ruleResults.length === 0) {
+                return false;
+            }
+            
+            const trueCount = ruleResults.filter(r => r === true).length;
+            const totalCount = ruleResults.length;
+            const ruleLogicType = groupRule.ruleLogicType;
+            
+            switch(ruleLogicType) {
+                case "all":
+                    return trueCount === totalCount;
+                    
+                case "any":
+                    return trueCount >= 1;
+                    
+                case "count":
+                    const minCount = groupRule.minRuleCount || 1;
+                    return trueCount >= minCount;
+                    
+                case "percent":
+                    const minPercent = groupRule.minRulePercent || 50;
+                    const actualPercent = (trueCount / totalCount) * 100;
+                    return actualPercent >= minPercent;
+                    
+                default:
+                    return trueCount === totalCount;
+            }
+        }
+
+        function evaluateRules() {
+            const rules = document.querySelectorAll('.rule-item');
+            const ruleResults = Array.from(rules).map(rule => rule.classList.contains('true'));
+            
+            const groupRule = {
+                ruleLogicType: document.getElementById("ruleLogicType").value,
+                minRuleCount: parseInt(document.getElementById("minRuleCount").value) || 1,
+                minRulePercent: parseInt(document.getElementById("minRulePercent").value) || 50
+            };
+
+            const result = evaluateGroupRule(groupRule, ruleResults);
+            const trueCount = ruleResults.filter(r => r === true).length;
+            const totalCount = ruleResults.length;
+            const percentage = ((trueCount / totalCount) * 100).toFixed(1);
+
+            const resultDiv = document.getElementById("evaluationResult");
+            resultDiv.classList.remove("hidealways");
+            
+            let explanation = "";
+            switch(groupRule.ruleLogicType) {
+                case "all":
+                    explanation = `All rules must be true. ${trueCount} of ${totalCount} are true.`;
+                    break;
+                case "any":
+                    explanation = `At least one rule must be true. ${trueCount} of ${totalCount} are true.`;
+                    break;
+                case "count":
+                    explanation = `At least ${groupRule.minRuleCount} rules must be true. ${trueCount} of ${totalCount} are true.`;
+                    break;
+                case "percent":
+                    explanation = `At least ${groupRule.minRulePercent}% of rules must be true. ${percentage}% (${trueCount} of ${totalCount}) are true.`;
+                    break;
+            }
+
+            if (result) {
+                resultDiv.className = "evaluation-result pass";
+                resultDiv.innerHTML = `✓ PASS: Group Rule Displays<br><small>${explanation}</small>`;
+            } else {
+                resultDiv.className = "evaluation-result fail";
+                resultDiv.innerHTML = `✗ FAIL: Group Rule Hidden<br><small>${explanation}</small>`;
+            }
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize IndexedDB
+            if (typeof initialSetupIndexedDB === 'function') {
+                initialSetupIndexedDB();
+                console.log("✅ Database initialized");
+            }
+            updateGroupRuleLogicDisplay();
+            
+            // Silently check and create sample data if needed (no prompts)
+            setTimeout(autoCreateSampleDataIfNeeded, 500);
+        });
+
+        function autoCreateSampleDataIfNeeded() {
+            const database = "authorExcuTrust";
+            const databaseOpenRequest = indexedDB.open(database);
+            
+            databaseOpenRequest.onsuccess = () => {
+                const db = databaseOpenRequest.result;
+                
+                // Check if ruleStore exists
+                if (!db.objectStoreNames.contains('ruleStore')) {
+                    console.log("⚠️ ruleStore not found");
+                    db.close();
+                    return;
+                }
+                
+                const tx = db.transaction("ruleStore", "readonly");
+                const store = tx.objectStore("ruleStore");
+                const keyPath = ["groupruleStore", 1, "JSM", 1, "USER_ELIGIBILITY"];
+                const getRequest = store.get(keyPath);
+                
+                getRequest.onsuccess = () => {
+                    const rule = getRequest.result;
+                    if (!rule) {
+                        console.log("📦 Auto-creating sample data...");
+                        // Silently create sample data without any prompts
+                        createSampleDataSilently();
+                    } else {
+                        console.log("✅ Sample data already exists");
+                    }
+                };
+                
+                tx.oncomplete = () => {
+                    db.close();
+                };
+            };
+        }
+
+        function createSampleDataSilently() {
+            const sampleRules = [
+                {
+                    keyPathValue: ["trueruleStore", 1, "JSM", 1, "AGE_OVER_18"],
+                    ruleContent: "User must be over 18 years old",
+                    ruleContentInnerText: "User must be over 18 years old",
+                    ruleAuthor: "JSM",
+                    ruleID: "AGE_OVER_18",
+                    versionDateSince1969: Date.now(),
+                    localTimeString: new Date().toString()
+                },
+                {
+                    keyPathValue: ["trueruleStore", 1, "JSM", 1, "EMAIL_VERIFIED"],
+                    ruleContent: "User email must be verified",
+                    ruleContentInnerText: "User email must be verified",
+                    ruleAuthor: "JSM",
+                    ruleID: "EMAIL_VERIFIED",
+                    versionDateSince1969: Date.now(),
+                    localTimeString: new Date().toString()
+                },
+                {
+                    keyPathValue: ["groupruleStore", 1, "JSM", 1, "USER_ELIGIBILITY"],
+                    groupruleContent: "User Eligibility Requirements",
+                    groupruleContentInnerText: "User Eligibility Requirements",
+                    groupruleAuthor: "JSM",
+                    groupruleID: "USER_ELIGIBILITY",
+                    ruleLogicType: "all",
+                    all0Any1True: false,
+                    allRowChoices: [],
+                    allArrayType: ["trueruleStore", "trueruleStore"],
+                    allArrayAuthor: ["JSM", "JSM"],
+                    allArrayID: ["AGE_OVER_18", "EMAIL_VERIFIED"],
+                    versionDateSince1969: Date.now(),
+                    localTimeString: new Date().toString()
+                }
+            ];
+
+            const database = "authorExcuTrust";
+            const databaseOpenRequest = indexedDB.open(database);
+            
+            databaseOpenRequest.onsuccess = () => {
+                const db = databaseOpenRequest.result;
+                const tx = db.transaction("ruleStore", "readwrite");
+                const store = tx.objectStore("ruleStore");
+                
+                let created = 0;
+                
+                sampleRules.forEach(rule => {
+                    const request = store.add(rule);
+                    request.onsuccess = () => {
+                        created++;
+                        console.log(`✅ Created: ${rule.keyPathValue[4]}`);
+                    };
+                    request.onerror = () => {
+                        // Silently skip if already exists
+                        console.log(`⏭️ Skipped: ${rule.keyPathValue[4]} (already exists)`);
+                    };
+                });
+                
+                tx.oncomplete = () => {
+                    db.close();
+                    if (created > 0) {
+                        console.log(`✅ Auto-created ${created} sample rule(s) successfully`);
+                    }
+                };
+            };
+        }
+
+        function showSampleDataAlert() {
+            // Removed - no more alerts
+        }
+
+        // Create sample data function - solves the "Could not find rule data" error
+        function createSampleDataNow() {
+            console.log("Creating sample data...");
+            
+            const sampleRules = [
+                {
+                    keyPathValue: ["trueruleStore", 1, "JSM", 1, "AGE_OVER_18"],
+                    ruleContent: "User must be over 18 years old",
+                    ruleContentInnerText: "User must be over 18 years old",
+                    ruleAuthor: "JSM",
+                    ruleID: "AGE_OVER_18",
+                    versionDateSince1969: Date.now(),
+                    localTimeString: new Date().toString()
+                },
+                {
+                    keyPathValue: ["trueruleStore", 1, "JSM", 1, "EMAIL_VERIFIED"],
+                    ruleContent: "User email must be verified",
+                    ruleContentInnerText: "User email must be verified",
+                    ruleAuthor: "JSM",
+                    ruleID: "EMAIL_VERIFIED",
+                    versionDateSince1969: Date.now(),
+                    localTimeString: new Date().toString()
+                },
+                {
+                    keyPathValue: ["groupruleStore", 1, "JSM", 1, "USER_ELIGIBILITY"],
+                    groupruleContent: "User Eligibility Requirements",
+                    groupruleContentInnerText: "User Eligibility Requirements",
+                    groupruleAuthor: "JSM",
+                    groupruleID: "USER_ELIGIBILITY",
+                    ruleLogicType: "all",
+                    all0Any1True: false,
+                    allRowChoices: [],
+                    allArrayType: ["trueruleStore", "trueruleStore"],
+                    allArrayAuthor: ["JSM", "JSM"],
+                    allArrayID: ["AGE_OVER_18", "EMAIL_VERIFIED"],
+                    versionDateSince1969: Date.now(),
+                    localTimeString: new Date().toString()
+                }
+            ];
+
+            const database = "authorExcuTrust";
+            const databaseOpenRequest = indexedDB.open(database);
+            
+            databaseOpenRequest.onsuccess = () => {
+                const db = databaseOpenRequest.result;
+                const tx = db.transaction("ruleStore", "readwrite");
+                const store = tx.objectStore("ruleStore");
+                
+                let added = 0;
+                let skipped = 0;
+                
+                sampleRules.forEach(rule => {
+                    const request = store.add(rule);
+                    
+                    request.onsuccess = () => {
+                        added++;
+                        console.log(`✅ Added: ${rule.keyPathValue[4]}`);
+                    };
+                    
+                    request.onerror = (event) => {
+                        if (event.target.error.name === 'ConstraintError') {
+                            skipped++;
+                            console.log(`⚠️ Already exists: ${rule.keyPathValue[4]}`);
+                        } else {
+                            console.error(`❌ Error: ${rule.keyPathValue[4]}`, event.target.error);
+                        }
+                    };
+                });
+                
+                tx.oncomplete = () => {
+                    db.close();
+                    // Success message only logged to console, no alerts
+                    if (added > 0) {
+                        console.log(`✅ Manually created ${added} sample rule(s)`);
+                    } else if (skipped > 0) {
+                        console.log(`✅ All sample rules already exist (${skipped} found)`);
+                    }
+                };
+                
+                tx.onerror = (event) => {
+                    db.close();
+                    console.error("Transaction error:", event.target.error);
+                    alert("❌ Error creating rules. Check console for details.");
+                };
+            };
+            
+            databaseOpenRequest.onerror = (event) => {
+                alert("❌ Error opening database. Make sure setupIndexedDB.js is loaded.");
+            };
+        }
+    </script>
+</body>
+</html>

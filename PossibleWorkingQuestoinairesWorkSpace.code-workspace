@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "20201013"
+		},
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"editor.wordWrap": "on",
+		"liveServer.settings.multiRootWorkspaceName": "20201013"
+	}
+}

@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Create Rule Collection</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    <!-- Modern CSS -->
+    <link rel="stylesheet" href="design_system.css">
+    <link rel="stylesheet" href="modern_styles.css">
+    
+    <!-- jQuery -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/7.22.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.22.1/firebase-firestore.js"></script>
+
+    <!-- IndexedDB Setup -->
+    <script src="setupIndexedDB.js"></script>
+    
+    <!-- Group Rule Logic -->
+    <script src="GenerateRule.js"></script>
+
+    <style>
+        .create-container {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #333;
+        }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        .form-group textarea {
+            min-height: 100px;
+            font-family: inherit;
+        }
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #218838;
+        }
+        .alert {
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1.5rem;
+        }
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .logic-box {
+            background: #f0f8ff;
+            border: 2px solid #007bff;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+        .logic-display {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-top: 1rem;
+        }
+        .rule-selector {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 1rem;
+            margin-top: 0.5rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .rule-checkbox {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem;
+            margin: 0.25rem 0;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        .rule-checkbox:hover {
+            background: #f8f9fa;
+        }
+        .rule-checkbox input[type="checkbox"] {
+            width: auto;
+            margin-right: 0.75rem;
+        }
+        .rule-info {
+            flex: 1;
+        }
+        .rule-id {
+            font-weight: 600;
+            color: #007bff;
+        }
+        .rule-author {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        .hidealways {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="create-container">
+        <h1>Create New Rule Collection</h1>
+        
+        <div class="alert alert-info">
+            <strong>ℹ️ About Collections:</strong> Rule collections allow you to group multiple display rules together with flexible evaluation logic (ALL/ANY/COUNT/PERCENT).
+        </div>
+
+        <div id="alertContainer"></div>
+        
+        <!-- Quick Test Section -->
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; text-align: center;">
+            <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 0.5rem;">🚀 Quick Test</div>
+            <button type="button" class="btn" onclick="autoFillTestData()" style="background: white; color: #667eea; margin: 0.5rem;">
+                ⚡ Auto-Fill & Create Test Collection
+            </button>
+            <div style="font-size: 0.85rem; margin-top: 0.5rem; opacity: 0.9;">Click to instantly fill form with test data and create a collection</div>
+        </div>
+
+        <form id="createCollectionForm">
+            <div class="form-group">
+                <label for="collectionAuthor">Author: <span style="color: red;">*</span></label>
+                <select id="collectionAuthor" required>
+                    <option value="">-- Loading authors... --</option>
+                </select>
+                <small style="color: #666;">Select an author from the database</small>
+            </div>
+
+            <div class="form-group">
+                <label for="collectionId">Collection ID: <span style="color: red;">*</span></label>
+                <input type="text" id="collectionId" required readonly style="background: #e9ecef; cursor: not-allowed;">
+                <small style="color: #666;">Auto-generated unique identifier (cannot be edited)</small>
+            </div>
+
+            <div class="form-group">
+                <label for="collectionTitle">Collection Title: <span style="color: red;">*</span></label>
+                <input type="text" id="collectionTitle" required placeholder="e.g., User Eligibility Requirements">
+                <small style="color: #666;">Descriptive title for this collection</small>
+            </div>
+
+            <div class="logic-box">
+                <h4 style="margin-top: 0;">Rule Evaluation Logic</h4>
+                
+                <div class="form-group">
+                    <label for="logicType">How should the rules be evaluated?</label>
+                    <select id="logicType" onchange="updateLogicDisplay()">
+                        <option value="all">ALL - All rules must be true (AND)</option>
+                        <option value="any">ANY - At least one rule must be true (OR)</option>
+                        <option value="count">COUNT - At least N rules must be true</option>
+                        <option value="percent">PERCENT - At least X% of rules must be true</option>
+                    </select>
+                </div>
+
+                <div id="countInput" class="form-group hidealways">
+                    <label for="minCount">Minimum number of rules that must be true:</label>
+                    <input type="number" id="minCount" min="1" value="2">
+                </div>
+
+                <div id="percentInput" class="form-group hidealways">
+                    <label for="minPercent">Minimum percentage of rules (1-100):</label>
+                    <input type="number" id="minPercent" min="1" max="100" value="50">
+                </div>
+
+                <div class="logic-display">
+                    <strong>📝 Logic Summary:</strong>
+                    <p id="logicSummary" style="margin: 0.5rem 0 0 0;">Display only when <strong>all</strong> rules below are true.</p>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Select Display Rules to Include: <span style="color: red;">*</span></label>
+                <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <button type="button" class="btn btn-secondary" onclick="loadAvailableRules()">
+                        🔄 Reload Rules
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="selectAllRules()">
+                        ☑️ Select All
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="deselectAllRules()">
+                        ☐ Deselect All
+                    </button>
+                </div>
+                <div id="rulesSelector" class="rule-selector">
+                    <div id="rulesList" style="color: #666; text-align: center; padding: 2rem;">
+                        Loading available display rules...
+                    </div>
+                </div>
+                <small id="rulesCount" style="color: #666;">No rules selected</small>
+            </div>
+
+            <div class="button-group">
+                <button type="submit" class="btn btn-success">💾 Create Collection</button>
+                <button type="button" class="btn btn-warning" onclick="testButtonClick()" style="background: #ffc107;">🧪 TEST BUTTON CLICK</button>
+                <button type="button" class="btn btn-info" onclick="autoFillTestData()" style="background: #17a2b8;">🧪 Auto-Fill Test Data</button>
+                <button type="button" class="btn btn-secondary" onclick="goBack()">← Cancel</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        let availableRules = [];
+
+        // Auto-load rules when page loads
+        window.addEventListener('DOMContentLoaded', async function() {
+            console.log('=== Create Collection page loaded ===');
+            
+            try {
+                // Auto-generate Collection ID
+                console.log('Step 1: Generating Collection ID');
+                generateCollectionId();
+                
+                console.log('Step 2: Loading authors...');
+                await loadAuthors();
+                console.log('Step 2: Complete - authors loaded');
+                
+                console.log('Step 3: Ensuring test data exists...');
+                await ensureTestDataExists();
+                console.log('Step 3: Complete - test data check finished');
+                
+                console.log('Step 4: Loading available rules...');
+                await loadAvailableRules();
+                console.log('Step 4: Complete - rules loaded');
+                
+                // Attach form submit handler AFTER DOM is loaded
+                console.log('Step 5: Attaching form submit handler...');
+                const form = document.getElementById('createCollectionForm');
+                if (form) {
+                    form.addEventListener('submit', async function(e) {
+                        e.preventDefault();
+                        console.log('=== FORM SUBMITTED ===');
+                        console.log('Submit event prevented, calling createCollection()');
+                        await createCollection();
+                    });
+                    console.log('✓ Form submit handler attached successfully');
+                } else {
+                    console.error('❌ Form element not found!');
+                }
+            } catch (error) {
+                console.error('❌ Error during page initialization:', error);
+                showAlert('⚠️ Error loading page: ' + error.message, 'danger');
+            }
+        });
+
+        // Generate unique collection ID
+        function generateCollectionId() {
+            const timestamp = Date.now();
+            const randomNum = Math.floor(Math.random() * 1000);
+            const collectionId = `COLLECTION_${timestamp}_${randomNum}`;
+            document.getElementById('collectionId').value = collectionId;
+            console.log('Generated Collection ID:', collectionId);
+        }
+
+        // Load unique authors from database
+        async function loadAuthors() {
+            const authorSelect = document.getElementById('collectionAuthor');
+            
+            try {
+                console.log('  → Opening database to load authors...');
+                const db = await openDB();
+                
+                // Get authors from ruleStore
+                const tx = db.transaction('ruleStore', 'readonly');
+                const store = tx.objectStore('ruleStore');
+                
+                const allRules = await new Promise((resolve, reject) => {
+                    const request = store.getAll();
+                    request.onsuccess = () => resolve(request.result || []);
+                    request.onerror = () => reject(request.error);
+                });
+
+                // Get unique authors from both display rules and collections
+                const authorsSet = new Set();
+                allRules.forEach(rule => {
+                    if (rule.ruleAuthor) {
+                        authorsSet.add(rule.ruleAuthor);
+                    }
+                    if (rule.groupruleAuthor) {
+                        authorsSet.add(rule.groupruleAuthor);
+                    }
+                });
+                
+                // Also get authors from authorMetadata store
+                if (db.objectStoreNames.contains('authorMetadata')) {
+                    console.log('  → Loading authors from authorMetadata store...');
+                    const authorTx = db.transaction('authorMetadata', 'readonly');
+                    const authorStore = authorTx.objectStore('authorMetadata');
+                    const authorMetadata = await new Promise((resolve, reject) => {
+                        const request = authorStore.getAll();
+                        request.onsuccess = () => resolve(request.result || []);
+                        request.onerror = () => reject(request.error);
+                    });
+                    authorMetadata.forEach(meta => {
+                        if (meta.authorName) {
+                            authorsSet.add(meta.authorName);
+                        }
+                    });
+                    console.log('  → Added', authorMetadata.length, 'authors from metadata store');
+                }
+
+                const authors = Array.from(authorsSet).sort();
+                console.log('  → Found', authors.length, 'unique authors:', authors);
+
+                // Populate dropdown
+                authorSelect.innerHTML = '<option value="">-- Select an author --</option>';
+                
+                authors.forEach(author => {
+                    const option = document.createElement('option');
+                    option.value = author;
+                    option.textContent = author;
+                    authorSelect.appendChild(option);
+                });
+                
+                // Auto-select last used author if available
+                const lastAuthor = localStorage.getItem('lastCollectionAuthor');
+                if (lastAuthor && authors.includes(lastAuthor)) {
+                    authorSelect.value = lastAuthor;
+                    console.log('  → Auto-selected last used author:', lastAuthor);
+                }
+
+                // Add "Other" option to manually enter
+                const otherOption = document.createElement('option');
+                otherOption.value = '__NEW__';
+                otherOption.textContent = '➕ Add New Author...';
+                authorSelect.appendChild(otherOption);
+
+                // Handle "Add New Author" selection
+                authorSelect.addEventListener('change', function() {
+                    if (this.value === '__NEW__') {
+                        const newAuthor = prompt('Enter new author name (e.g., your initials):');
+                        if (newAuthor && newAuthor.trim()) {
+                            const trimmedAuthor = newAuthor.trim().toUpperCase();
+                            // Add to dropdown
+                            const newOption = document.createElement('option');
+                            newOption.value = trimmedAuthor;
+                            newOption.textContent = trimmedAuthor;
+                            authorSelect.insertBefore(newOption, otherOption);
+                            // Select the new author
+                            authorSelect.value = trimmedAuthor;
+                        } else {
+                            // Reset to empty if cancelled
+                            authorSelect.value = '';
+                        }
+                    }
+                });
+                
+                db.close();
+
+                db.close();
+            } catch (error) {
+                console.error('❌ Error loading authors:', error);
+                authorSelect.innerHTML = '<option value="">Error loading authors</option>';
+            }
+        }
+
+        // Ensure test data exists
+        async function ensureTestDataExists() {
+            try {
+                console.log('  → Opening database for test data check...');
+                const db = await openDB();
+                console.log('  → Database opened successfully');
+                
+                const tx = db.transaction('ruleStore', 'readonly');
+                const store = tx.objectStore('ruleStore');
+                
+                console.log('  → Fetching all rules...');
+                const allRules = await new Promise((resolve, reject) => {
+                    const request = store.getAll();
+                    request.onsuccess = () => {
+                        console.log('  → GetAll request succeeded');
+                        resolve(request.result || []);
+                    };
+                    request.onerror = () => {
+                        console.error('  → GetAll request failed:', request.error);
+                        reject(request.error);
+                    };
+                });
+
+                const displayRules = allRules.filter(rule => rule.keyPathValue && rule.keyPathValue[0] === 'trueruleStore');
+                
+                console.log('  → Found', allRules.length, 'total rules,', displayRules.length, 'are display rules');
+                
+                if (displayRules.length === 0) {
+                    console.log('  → No display rules found - creating test data...');
+                    showAlert('⚠️ No display rules found. Creating test data automatically...', 'info');
+                    await createTestDataInline();
+                    showAlert('✅ Test data created! You can now select rules below.', 'success');
+                }
+            } catch (error) {
+                console.error('❌ Error checking test data:', error);
+                // Don't throw - let the page continue to load
+            }
+        }
+
+        // Create test data inline
+        async function createTestDataInline() {
+            console.log('  → Starting test data creation...');
+            const testDisplayRules = [
+                {
+                    keyPathValue: ["trueruleStore", 1, "JSM", 1, "AGE_OVER_18"],
+                    ruleContent: "User must be 18 years or older",
+                    ruleContentInnerText: "User must be 18 years or older",
+                    ruleAuthor: "JSM",
+                    ruleID: "AGE_OVER_18",
+                    versionDateSince1969: Date.now(),
+                    localTimeString: new Date().toString()
+                },
+                {
+                    keyPathValue: ["trueruleStore", 1, "JSM", 1, "EMAIL_VERIFIED"],
+                    ruleContent: "User email address must be verified",
+                    ruleContentInnerText: "User email address must be verified",
+                    ruleAuthor: "JSM",
+                    ruleID: "EMAIL_VERIFIED",
+                    versionDateSince1969: Date.now(),
+                    localTimeString: new Date().toString()
+                },
+                {
+                    keyPathValue: ["trueruleStore", 1, "JSM", 1, "PROFILE_COMPLETE"],
+                    ruleContent: "User profile must be 100% complete",
+                    ruleContentInnerText: "User profile must be 100% complete",
+                    ruleAuthor: "JSM",
+                    ruleID: "PROFILE_COMPLETE",
+                    versionDateSince1969: Date.now(),
+                    localTimeString: new Date().toString()
+                },
+                {
+                    keyPathValue: ["trueruleStore", 1, "JSM", 1, "TERMS_ACCEPTED"],
+                    ruleContent: "User must accept terms and conditions",
+                    ruleContentInnerText: "User must accept terms and conditions",
+                    ruleAuthor: "JSM",
+                    ruleID: "TERMS_ACCEPTED",
+                    versionDateSince1969: Date.now(),
+                    localTimeString: new Date().toString()
+                },
+                {
+                    keyPathValue: ["trueruleStore", 1, "ADMIN", 1, "PAYMENT_METHOD_ADDED"],
+                    ruleContent: "User must have a valid payment method on file",
+                    ruleContentInnerText: "User must have a valid payment method on file",
+                    ruleAuthor: "ADMIN",
+                    ruleID: "PAYMENT_METHOD_ADDED",
+                    versionDateSince1969: Date.now(),
+                    localTimeString: new Date().toString()
+                }
+            ];
+
+            console.log('  → Opening database for writing...');
+            const db = await openDB();
+            const tx = db.transaction('ruleStore', 'readwrite');
+            const store = tx.objectStore('ruleStore');
+
+            for (const rule of testDisplayRules) {
+                await new Promise((resolve) => {
+                    const request = store.put(rule);
+                    request.onsuccess = () => {
+                        console.log('  → Added rule:', rule.ruleID);
+                        resolve();
+                    };
+                    request.onerror = () => {
+                        console.log('  → Rule already exists or error:', rule.ruleID);
+                        resolve(); // Skip if exists
+                    };
+                });
+            }
+            
+            console.log('  → Test data creation complete:', testDisplayRules.length, 'rules');
+        }
+
+        // Update logic display
+        function updateLogicDisplay() {
+            const logicType = document.getElementById('logicType').value;
+            const countInput = document.getElementById('countInput');
+            const percentInput = document.getElementById('percentInput');
+            const logicSummary = document.getElementById('logicSummary');
+
+            // Hide all conditional inputs
+            countInput.classList.add('hidealways');
+            percentInput.classList.add('hidealways');
+
+            // Show appropriate input and update summary
+            switch(logicType) {
+                case 'all':
+                    logicSummary.innerHTML = 'Display only when <strong>all</strong> rules below are true.';
+                    break;
+                case 'any':
+                    logicSummary.innerHTML = 'Display when <strong>any one or more</strong> rules below are true.';
+                    break;
+                case 'count':
+                    countInput.classList.remove('hidealways');
+                    const count = document.getElementById('minCount').value;
+                    logicSummary.innerHTML = `Display when at least <strong>${count}</strong> of the rules below are true.`;
+                    break;
+                case 'percent':
+                    percentInput.classList.remove('hidealways');
+                    const percent = document.getElementById('minPercent').value;
+                    logicSummary.innerHTML = `Display when at least <strong>${percent}%</strong> of the rules below are true.`;
+                    break;
+            }
+        }
+
+        // Update summary when count/percent changes
+        document.getElementById('minCount')?.addEventListener('input', updateLogicDisplay);
+        document.getElementById('minPercent')?.addEventListener('input', updateLogicDisplay);
+
+        // Load available display rules
+        async function loadAvailableRules() {
+            const rulesList = document.getElementById('rulesList');
+            rulesList.innerHTML = '<div style="text-align: center; padding: 2rem; color: #666;">🔄 Loading available display rules...</div>';
+            
+            try {
+                console.log('Opening database...');
+                const db = await openDB();
+                console.log('Database opened:', db.name);
+                
+                const tx = db.transaction('ruleStore', 'readonly');
+                const store = tx.objectStore('ruleStore');
+                const getAllRequest = store.getAll();
+                
+                const allRules = await new Promise((resolve, reject) => {
+                    getAllRequest.onsuccess = () => resolve(getAllRequest.result || []);
+                    getAllRequest.onerror = () => reject(getAllRequest.error);
+                });
+
+                console.log('All rules loaded:', allRules.length);
+
+                // Filter only display rules (trueruleStore)
+                availableRules = allRules.filter(rule => rule.keyPathValue[0] === 'trueruleStore');
+
+                console.log('Filtered display rules:', availableRules.length);
+
+                if (availableRules.length === 0) {
+                    rulesList.innerHTML = `
+                        <div style="text-align: center; padding: 2rem;">
+                            <div style="color: #dc3545; font-size: 1.2rem; margin-bottom: 1rem;">⚠️ No Display Rules Found</div>
+                            <p style="color: #666;">You need to create display rules before you can add them to a collection.</p>
+                            <div style="margin-top: 1rem;">
+                                <button class="btn btn-primary" onclick="window.location.href='createTestData.html'" style="margin: 0.5rem;">
+                                    🧪 Create Test Data
+                                </button>
+                                <button class="btn btn-secondary" onclick="window.location.href='ManageRules.html'" style="margin: 0.5rem;">
+                                    ← Back to Rules
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    updateRuleCount();
+                    return;
+                }
+
+                // Display rules
+                rulesList.innerHTML = '';
+
+                availableRules.forEach(rule => {
+                    const ruleDiv = document.createElement('div');
+                    ruleDiv.className = 'rule-checkbox';
+                    
+                    ruleDiv.innerHTML = `
+                        <input type="checkbox" id="rule_${rule.ruleID}" value="${rule.ruleID}" data-author="${rule.ruleAuthor}" onchange="updateRuleCount()">
+                        <div class="rule-info">
+                            <div class="rule-id">${rule.ruleID}</div>
+                            <div class="rule-author">Author: ${rule.ruleAuthor}</div>
+                            <div style="color: #666; font-size: 0.85rem;">${rule.ruleContent || rule.ruleContentInnerText || 'No description'}</div>
+                        </div>
+                    `;
+                    rulesList.appendChild(ruleDiv);
+                });
+
+                document.getElementById('rulesSelector').style.display = 'block';
+                updateRuleCount();
+                console.log('Rules loaded successfully');
+            } catch (error) {
+                console.error('Error loading rules:', error);
+                rulesList.innerHTML = `
+                    <div style="color: #721c24; background: #f8d7da; padding: 1rem; border-radius: 4px; margin: 1rem;">
+                        <strong>❌ Error loading rules:</strong> ${error.message}
+                        <br><br>
+                        <p style="color: #666; font-size: 0.9rem;">Make sure you have created the database first by visiting the Test Data page.</p>
+                        <div style="margin-top: 1rem;">
+                            <button class="btn btn-primary" onclick="window.location.href='createTestData.html'">🧪 Create Test Data</button>
+                            <button class="btn btn-secondary" onclick="loadAvailableRules()">🔄 Try Again</button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // Select all rules
+        function selectAllRules() {
+            const checkboxes = document.querySelectorAll('#rulesList input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = true);
+            updateRuleCount();
+        }
+
+        // Deselect all rules
+        function deselectAllRules() {
+            const checkboxes = document.querySelectorAll('#rulesList input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = false);
+            updateRuleCount();
+        }
+
+        // Update selected rule count
+        function updateRuleCount() {
+            const checkboxes = document.querySelectorAll('#rulesList input[type="checkbox"]:checked');
+            const count = checkboxes.length;
+            const total = document.querySelectorAll('#rulesList input[type="checkbox"]').length;
+            const countDisplay = document.getElementById('rulesCount');
+            
+            if (count === 0) {
+                countDisplay.innerHTML = '<span style="color: #dc3545;">⚠️ No rules selected - please select at least one</span>';
+            } else {
+                countDisplay.innerHTML = `<span style="color: #28a745;">✓ ${count} of ${total} rules selected</span>`;
+            }
+        }
+
+        // Auto-fill form with test data for quick testing
+        async function autoFillTestData() {
+            console.log('Auto-filling form with test data...');
+            
+            // Fill basic fields
+            const authorSelect = document.getElementById('collectionAuthor');
+            
+            // Try to select an existing author, or add TEST if no authors exist
+            if (authorSelect.options.length > 1) {
+                // Select first non-empty option
+                for (let i = 1; i < authorSelect.options.length; i++) {
+                    if (authorSelect.options[i].value && authorSelect.options[i].value !== '__NEW__') {
+                        authorSelect.value = authorSelect.options[i].value;
+                        break;
+                    }
+                }
+            }
+            
+            // If still empty, set to TEST
+            if (!authorSelect.value || authorSelect.value === '__NEW__') {
+                authorSelect.value = 'TEST';
+            }
+            
+            // Generate new Collection ID
+            generateCollectionId();
+            
+            document.getElementById('collectionTitle').value = 'Test Collection - Auto-filled';
+            document.getElementById('logicType').value = 'all';
+            updateLogicDisplay();
+            
+            // Wait a moment for rules to load if needed
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Select first 2 rules if available
+            const checkboxes = document.querySelectorAll('#rulesList input[type="checkbox"]');
+            console.log('Found checkboxes:', checkboxes.length);
+            
+            if (checkboxes.length === 0) {
+                showAlert('⚠️ No rules available. Creating test data and retrying...', 'warning');
+                await ensureTestDataExists();
+                await loadAvailableRules();
+                
+                // Try again after loading
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                const checkboxes2 = document.querySelectorAll('#rulesList input[type="checkbox"]');
+                
+                if (checkboxes2.length === 0) {
+                    showAlert('❌ Failed to load rules. Please refresh the page.', 'danger');
+                    return;
+                }
+                
+                // Select first 2 rules
+                const rulesToSelect = Math.min(2, checkboxes2.length);
+                for (let i = 0; i < rulesToSelect; i++) {
+                    checkboxes2[i].checked = true;
+                }
+            } else {
+                // Select first 2 rules (or all if less than 2)
+                const rulesToSelect = Math.min(2, checkboxes.length);
+                for (let i = 0; i < rulesToSelect; i++) {
+                    checkboxes[i].checked = true;
+                }
+            }
+            
+            updateRuleCount();
+            
+            showAlert('✅ Form auto-filled! Creating collection...', 'success');
+            
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            
+            // Automatically submit after 1 second
+            setTimeout(async () => {
+                console.log('Auto-submitting form...');
+                await createCollection();
+            }, 1000);
+        }
+
+        async function createCollection() {
+            console.log('=== CREATE COLLECTION FUNCTION CALLED ===');
+            console.log('Starting collection creation process...');
+            
+            try {
+                // Get form values
+                const author = document.getElementById('collectionAuthor').value.trim();
+                const id = document.getElementById('collectionId').value.trim().toUpperCase();
+                const title = document.getElementById('collectionTitle').value.trim();
+                const logicType = document.getElementById('logicType').value;
+
+                console.log('Form values:', { author, id, title, logicType });
+
+                // Validate required fields
+                if (!author || !id || !title) {
+                    console.warn('Validation failed: Missing required fields');
+                    showAlert('⚠️ Please fill in all required fields (Author, ID, and Title).', 'danger');
+                    return;
+                }
+
+                // Check if rules are loaded
+                const allCheckboxes = document.querySelectorAll('#rulesList input[type="checkbox"]');
+                console.log('Total checkboxes available:', allCheckboxes.length);
+                
+                if (allCheckboxes.length === 0) {
+                    console.warn('No rules loaded yet!');
+                    showAlert('⚠️ No display rules available. Please wait for rules to load or create some rules first.', 'danger');
+                    
+                    // Try to reload rules
+                    setTimeout(() => {
+                        showAlert('🔄 Attempting to reload rules...', 'info');
+                        loadAvailableRules();
+                    }, 1500);
+                    return;
+                }
+
+                // Get selected rules
+                const checkboxes = document.querySelectorAll('#rulesList input[type="checkbox"]:checked');
+                console.log('Selected checkboxes:', checkboxes.length);
+                console.log('Checkbox elements:', checkboxes);
+                
+                if (checkboxes.length === 0) {
+                    console.warn('Validation failed: No rules selected');
+                    console.warn('Validation failed: No rules selected');
+                    showAlert('⚠️ Please select at least one display rule to include in this collection. Click the checkboxes next to the rules you want to include.', 'danger');
+                    
+                    // Scroll to rules selector
+                    const rulesSelector = document.getElementById('rulesSelector');
+                    if (rulesSelector) {
+                        rulesSelector.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        rulesSelector.style.border = '2px solid #dc3545';
+                        setTimeout(() => {
+                            rulesSelector.style.border = '1px solid #ddd';
+                        }, 2000);
+                    }
+                    return;
+                }
+
+                const selectedRuleIDs = [];
+                const selectedRuleAuthors = [];
+                checkboxes.forEach(cb => {
+                    console.log('Selected rule:', cb.value, 'author:', cb.dataset.author);
+                    selectedRuleIDs.push(cb.value);
+                    selectedRuleAuthors.push(cb.dataset.author);
+                });
+
+                console.log('Selected rules:', selectedRuleIDs);
+                console.log('Rule authors:', selectedRuleAuthors);
+
+                // Build the collection object matching the database structure
+                const collection = {
+                    keyPathValue: ["groupruleStore", 1, author, 1, id],
+                    groupruleContent: title,
+                    groupruleContentInnerText: title,
+                    groupruleAuthor: author,
+                    groupruleID: id,
+                    ruleLogicType: logicType,
+                    all0Any1True: logicType === 'any', // Legacy field
+                    allRowChoices: [],
+                    allArrayType: selectedRuleIDs.map(() => 'trueruleStore'),
+                    allArrayAuthor: selectedRuleAuthors,
+                    allArrayID: selectedRuleIDs,
+                    versionDateSince1969: Date.now(),
+                    localTimeString: new Date().toString()
+                };
+
+                // Add count/percent values if applicable
+                if (logicType === 'count') {
+                    collection.minRuleCount = parseInt(document.getElementById('minCount').value);
+                    console.log('Added minRuleCount:', collection.minRuleCount);
+                } else if (logicType === 'percent') {
+                    collection.minRulePercent = parseInt(document.getElementById('minPercent').value);
+                    console.log('Added minRulePercent:', collection.minRulePercent);
+                }
+
+                console.log('Collection object created:', collection);
+
+                // Save to database
+                showAlert('💾 Saving collection...', 'info');
+                console.log('Opening database...');
+                
+                const db = await openDB();
+                console.log('Database opened:', db.name);
+                
+                const tx = db.transaction('ruleStore', 'readwrite');
+                const store = tx.objectStore('ruleStore');
+                
+                // Create new collection
+                console.log('Adding new collection to store...');
+                await new Promise((resolve, reject) => {
+                    const request = store.add(collection);
+                    request.onsuccess = () => {
+                        console.log('✓ Collection added successfully!');
+                        resolve();
+                    };
+                    request.onerror = () => {
+                        console.error('✗ Error adding collection:', request.error);
+                        if (request.error.name === 'ConstraintError') {
+                            reject(new Error('A collection with this Author and ID already exists. Please use a different ID.'));
+                        } else {
+                            reject(request.error);
+                        }
+                    };
+                });
+                
+                console.log('Collection saved successfully!');
+                
+                // Save last used author to localStorage
+                localStorage.setItem('lastCollectionAuthor', author);
+                console.log('Saved last used author to localStorage:', author);
+                
+                showAlert('✅ Collection created successfully! Redirecting...', 'success');
+                
+                // Redirect back after short delay
+                console.log('Redirecting to ManageCollections.html in 1.5 seconds...');
+                setTimeout(() => {
+                    console.log('Redirecting now...');
+                    window.location.href = 'ManageCollections.html';
+                }, 1500);
+                
+            } catch (error) {
+                console.error('=== CREATE COLLECTION ERROR ===');
+                console.error('Error details:', error);
+                console.error('Error stack:', error.stack);
+                showAlert('❌ Error creating collection: ' + error.message, 'danger');
+            }
+        }
+
+        function goBack() {
+            window.location.href = 'ManageRules.html';
+        }
+
+        function testButtonClick() {
+            alert('🟢 TEST BUTTON WORKS! JavaScript is running.');
+            console.log('Test button clicked');
+        }
+
+        function showAlert(message, type = 'info') {
+            const alertContainer = document.getElementById('alertContainer');
+            alertContainer.innerHTML = `
+                <div class="alert alert-${type}">
+                    ${message}
+                </div>
+            `;
+            
+            // Auto-dismiss success messages
+            if (type === 'success') {
+                setTimeout(() => {
+                    alertContainer.innerHTML = '';
+                }, 5000);
+            }
+        }
+
+        // Helper function to open database
+        async function openDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('authorExcuTrust');
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        // Initialize
+        updateLogicDisplay();
+    </script>
+</body>
+</html>

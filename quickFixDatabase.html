@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Fix - Create Sample Rules</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .status {
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .status.loading {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 10px 5px;
+        }
+        .btn:hover {
+            opacity: 0.9;
+        }
+        .btn-secondary {
+            background: #6c757d;
+        }
+        .log {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        .log-entry {
+            padding: 5px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Quick Database Fix</h1>
+        <p class="subtitle">Automatically create the missing sample rules</p>
+        
+        <div class="info-box">
+            <strong>📋 What this will create:</strong>
+            <ul>
+                <li>AGE_OVER_18 - Display Rule (Author: JSM)</li>
+                <li>EMAIL_VERIFIED - Display Rule (Author: JSM)</li>
+                <li>USER_ELIGIBILITY - Rule Collection (Author: JSM)</li>
+            </ul>
+        </div>
+
+        <div id="status" class="status loading" style="display: none;">
+            ⏳ Working...
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+            <button class="btn" onclick="createSampleDataNow()">
+                ✅ Create Sample Rules Now
+            </button>
+            <button class="btn btn-secondary" onclick="openManageRules()">
+                📄 Open ManageRules.html
+            </button>
+        </div>
+
+        <div class="log" id="log" style="display: none;">
+            <strong>📝 Log:</strong>
+            <div id="logEntries"></div>
+        </div>
+    </div>
+
+    <script src="setupIndexedDB.js"></script>
+    <script>
+        // Initialize database
+        window.addEventListener('load', () => {
+            initialSetupIndexedDB();
+            addLog("Database initialized");
+        });
+
+        function addLog(message) {
+            const logDiv = document.getElementById('log');
+            const logEntries = document.getElementById('logEntries');
+            logDiv.style.display = 'block';
+            
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logEntries.appendChild(entry);
+            
+            // Auto-scroll to bottom
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function updateStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.style.display = 'block';
+            statusDiv.className = `status ${type}`;
+            statusDiv.innerHTML = message;
+        }
+
+        function createSampleDataNow() {
+            addLog("Starting sample data creation...");
+            updateStatus("⏳ Creating sample rules...", "loading");
+
+            const sampleRules = [
+                {
+                    keyPathValue: ["trueruleStore", 1, "JSM", 1, "AGE_OVER_18"],
+                    ruleContent: "User must be over 18 years old",
+                    ruleContentInnerText: "User must be over 18 years old",
+                    ruleAuthor: "JSM",
+                    ruleID: "AGE_OVER_18",
+                    versionDateSince1969: Date.now(),
+                    localTimeString: new Date().toString()
+                },
+                {
+                    keyPathValue: ["trueruleStore", 1, "JSM", 1, "EMAIL_VERIFIED"],
+                    ruleContent: "User email must be verified",
+                    ruleContentInnerText: "User email must be verified",
+                    ruleAuthor: "JSM",
+                    ruleID: "EMAIL_VERIFIED",
+                    versionDateSince1969: Date.now(),
+                    localTimeString: new Date().toString()
+                },
+                {
+                    keyPathValue: ["groupruleStore", 1, "JSM", 1, "USER_ELIGIBILITY"],
+                    groupruleContent: "User Eligibility Requirements",
+                    groupruleContentInnerText: "User Eligibility Requirements",
+                    groupruleAuthor: "JSM",
+                    groupruleID: "USER_ELIGIBILITY",
+                    ruleLogicType: "all",
+                    all0Any1True: false,
+                    allRowChoices: [],
+                    allArrayType: ["trueruleStore", "trueruleStore"],
+                    allArrayAuthor: ["JSM", "JSM"],
+                    allArrayID: ["AGE_OVER_18", "EMAIL_VERIFIED"],
+                    versionDateSince1969: Date.now(),
+                    localTimeString: new Date().toString()
+                }
+            ];
+
+            const database = "authorExcuTrust";
+            const databaseOpenRequest = indexedDB.open(database);
+            
+            databaseOpenRequest.onsuccess = () => {
+                const db = databaseOpenRequest.result;
+                addLog("Database opened successfully");
+                
+                // Check if rules already exist
+                const checkTx = db.transaction("ruleStore", "readonly");
+                const checkStore = checkTx.objectStore("ruleStore");
+                const checkRequest = checkStore.getAll();
+                
+                checkRequest.onsuccess = () => {
+                    const existingRules = checkRequest.result;
+                    addLog(`Found ${existingRules.length} existing rules in database`);
+                    
+                    // Check if USER_ELIGIBILITY already exists
+                    const userEligExists = existingRules.some(rule => 
+                        rule.keyPathValue[4] === "USER_ELIGIBILITY" && 
+                        rule.keyPathValue[2] === "JSM"
+                    );
+                    
+                    if (userEligExists) {
+                        addLog("⚠️ USER_ELIGIBILITY already exists!");
+                        updateStatus("⚠️ Sample rules already exist! No action needed.", "success");
+                        return;
+                    }
+                    
+                    // Add the sample data
+                    addLog("Adding new sample rules...");
+                    const addTx = db.transaction("ruleStore", "readwrite");
+                    const addStore = addTx.objectStore("ruleStore");
+                    
+                    let added = 0;
+                    let errors = 0;
+                    
+                    sampleRules.forEach(rule => {
+                        const request = addStore.add(rule);
+                        
+                        request.onsuccess = () => {
+                            added++;
+                            addLog(`✅ Added: ${rule.keyPathValue[4]}`);
+                        };
+                        
+                        request.onerror = (event) => {
+                            errors++;
+                            addLog(`❌ Error adding ${rule.keyPathValue[4]}: ${event.target.error}`);
+                        };
+                    });
+                    
+                    addTx.oncomplete = () => {
+                        db.close();
+                        if (added === sampleRules.length) {
+                            addLog(`✅ Successfully created all ${added} sample rules!`);
+                            updateStatus(
+                                `✅ SUCCESS! Created ${added} sample rule(s)<br><br>` +
+                                `You can now:<br>` +
+                                `• Close this window<br>` +
+                                `• Refresh your application<br>` +
+                                `• The USER_ELIGIBILITY rule is now available!`,
+                                "success"
+                            );
+                        } else {
+                            addLog(`⚠️ Completed with ${errors} error(s)`);
+                            updateStatus(`⚠️ Added ${added} rules, but ${errors} failed`, "error");
+                        }
+                    };
+                    
+                    addTx.onerror = (event) => {
+                        db.close();
+                        addLog(`❌ Transaction error: ${event.target.error}`);
+                        updateStatus("❌ Error creating rules", "error");
+                    };
+                };
+                
+                checkRequest.onerror = (event) => {
+                    db.close();
+                    addLog(`❌ Error checking existing rules: ${event.target.error}`);
+                    updateStatus("❌ Error checking database", "error");
+                };
+            };
+            
+            databaseOpenRequest.onerror = (event) => {
+                addLog(`❌ Error opening database: ${event.target.error}`);
+                updateStatus("❌ Error opening database", "error");
+            };
+        }
+
+        function openManageRules() {
+            window.open('ManageRules.html', '_blank');
+        }
+    </script>
+</body>
+</html>

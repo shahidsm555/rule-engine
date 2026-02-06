@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Inspector - Check Rules</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body { padding: 20px; background-color: #f5f5f5; }
+        .container-main { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .rule-card { padding: 15px; margin: 10px 0; background: #f8f9fa; border-left: 4px solid #007bff; border-radius: 5px; }
+        .rule-card.grouprule { border-left-color: #28a745; }
+        .rule-card.truerule { border-left-color: #007bff; }
+        .stats { background: #e9ecef; padding: 20px; border-radius: 8px; margin: 20px 0; }
+        .btn-group-custom { margin: 10px 0; }
+        pre { background: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+        .empty-state { text-align: center; padding: 40px; color: #6c757d; }
+    </style>
+</head>
+<body>
+    <div class="container-main">
+        <h1 class="text-center mb-4">📊 IndexedDB Database Inspector</h1>
+        <p class="lead text-center">Check what rules exist in your database</p>
+        
+        <hr class="my-4">
+        
+        <div class="btn-group-custom">
+            <button class="btn btn-primary" onclick="loadAllRules()">🔍 Load All Rules</button>
+            <button class="btn btn-success" onclick="exportData()">📥 Export Data (JSON)</button>
+            <button class="btn btn-warning" onclick="checkSpecificRule()">🔎 Check Specific Rule</button>
+            <button class="btn btn-danger" onclick="clearDatabase()">🗑️ Clear All Data</button>
+        </div>
+
+        <div id="stats" class="stats" style="display: none;">
+            <h5>Database Statistics:</h5>
+            <div id="statsContent"></div>
+        </div>
+
+        <div id="rulesContainer">
+            <div class="empty-state">
+                <h4>👆 Click "Load All Rules" to inspect your database</h4>
+            </div>
+        </div>
+
+        <div id="searchResult" style="margin-top: 20px; display: none;">
+            <h5>Search Result:</h5>
+            <pre id="searchResultContent"></pre>
+        </div>
+    </div>
+
+    <script src="setupIndexedDB.js"></script>
+    <script>
+        // Initialize database on load
+        window.addEventListener('load', () => {
+            initialSetupIndexedDB();
+            console.log("Database initialized");
+        });
+
+        function loadAllRules() {
+            console.log("Loading all rules from database...");
+            const database = "authorExcuTrust";
+            const databaseOpenRequest = indexedDB.open(database);
+            
+            databaseOpenRequest.onsuccess = () => {
+                const db = databaseOpenRequest.result;
+                const tx = db.transaction("ruleStore", "readonly");
+                const store = tx.objectStore("ruleStore");
+                const getAllRequest = store.getAll();
+                
+                getAllRequest.onsuccess = () => {
+                    const allRules = getAllRequest.result;
+                    console.log("All rules retrieved:", allRules);
+                    displayRules(allRules);
+                    showStats(allRules);
+                };
+                
+                getAllRequest.onerror = (event) => {
+                    console.error("Error loading rules:", event);
+                    alert("❌ Error loading rules from database");
+                };
+                
+                tx.oncomplete = () => {
+                    db.close();
+                };
+            };
+            
+            databaseOpenRequest.onerror = (event) => {
+                console.error("Error opening database:", event);
+                alert("❌ Error opening database. Make sure it's initialized.");
+            };
+        }
+
+        function displayRules(rules) {
+            const container = document.getElementById('rulesContainer');
+            
+            if (rules.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <h4>⚠️ No rules found in database</h4>
+                        <p>The database is empty. You need to create some rules first.</p>
+                        <button class="btn btn-success" onclick="window.open('ManageRules.html', '_blank')">
+                            Open ManageRules.html to Create Data
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '<h4 class="mt-4">Rules in Database:</h4>';
+            
+            rules.forEach((rule, index) => {
+                const ruleType = rule.keyPathValue[0];
+                const ruleClass = ruleType === 'groupruleStore' ? 'grouprule' : 'truerule';
+                const ruleIcon = ruleType === 'groupruleStore' ? '📁' : '📄';
+                const author = rule.keyPathValue[2];
+                const id = rule.keyPathValue[4];
+                const content = rule.ruleContent || rule.groupruleContent || 'No description';
+                
+                html += `
+                    <div class="rule-card ${ruleClass}">
+                        <strong>${ruleIcon} Rule #${index + 1}</strong>
+                        <div><strong>Type:</strong> ${ruleType}</div>
+                        <div><strong>Author:</strong> ${author}</div>
+                        <div><strong>ID:</strong> ${id}</div>
+                        <div><strong>Description:</strong> ${content}</div>
+                        <div><strong>KeyPath:</strong> <code>${JSON.stringify(rule.keyPathValue)}</code></div>
+                        ${ruleType === 'groupruleStore' ? `
+                            <div><strong>Logic Type:</strong> ${rule.ruleLogicType || 'all'}</div>
+                            <div><strong>Child Rules:</strong> ${rule.allArrayID ? rule.allArrayID.join(', ') : 'None'}</div>
+                        ` : ''}
+                        <button class="btn btn-sm btn-info mt-2" onclick='viewRuleDetails(${JSON.stringify(rule)})'>
+                            View Full Details
+                        </button>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        function showStats(rules) {
+            const statsDiv = document.getElementById('stats');
+            const statsContent = document.getElementById('statsContent');
+            
+            const trueRules = rules.filter(r => r.keyPathValue[0] === 'trueruleStore');
+            const groupRules = rules.filter(r => r.keyPathValue[0] === 'groupruleStore');
+            
+            statsContent.innerHTML = `
+                <div class="row">
+                    <div class="col-md-4">
+                        <strong>Total Rules:</strong> ${rules.length}
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Display Rules:</strong> ${trueRules.length}
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Rule Collections:</strong> ${groupRules.length}
+                    </div>
+                </div>
+            `;
+            
+            statsDiv.style.display = 'block';
+        }
+
+        function viewRuleDetails(rule) {
+            const resultDiv = document.getElementById('searchResult');
+            const resultContent = document.getElementById('searchResultContent');
+            resultContent.textContent = JSON.stringify(rule, null, 2);
+            resultDiv.style.display = 'block';
+            resultDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function checkSpecificRule() {
+            const author = prompt("Enter Author (e.g., JSM):", "JSM");
+            if (!author) return;
+            
+            const ruleId = prompt("Enter Rule ID (e.g., USER_ELIGIBILITY):", "USER_ELIGIBILITY");
+            if (!ruleId) return;
+            
+            const ruleType = confirm("Is this a Group Rule Collection?\nClick OK for YES (Collection), Cancel for NO (Display Rule)") 
+                ? "groupruleStore" 
+                : "trueruleStore";
+            
+            const keyPathValue = [ruleType, 1, author, 1, ruleId];
+            
+            console.log("Searching for rule with keyPath:", keyPathValue);
+            
+            const database = "authorExcuTrust";
+            const databaseOpenRequest = indexedDB.open(database);
+            
+            databaseOpenRequest.onsuccess = () => {
+                const db = databaseOpenRequest.result;
+                const tx = db.transaction("ruleStore", "readonly");
+                const store = tx.objectStore("ruleStore");
+                const getRequest = store.get(keyPathValue);
+                
+                getRequest.onsuccess = () => {
+                    const rule = getRequest.result;
+                    const resultDiv = document.getElementById('searchResult');
+                    const resultContent = document.getElementById('searchResultContent');
+                    
+                    if (rule) {
+                        resultContent.textContent = `✅ FOUND!\n\n${JSON.stringify(rule, null, 2)}`;
+                        resultContent.style.color = 'green';
+                        alert(`✅ Rule found!\n\nAuthor: ${author}\nID: ${ruleId}\nType: ${ruleType}`);
+                    } else {
+                        resultContent.textContent = `❌ NOT FOUND\n\nSearched KeyPath: ${JSON.stringify(keyPathValue, null, 2)}\n\nThis rule does not exist in the database.`;
+                        resultContent.style.color = 'red';
+                        alert(`❌ Rule not found!\n\nKeyPath: ${JSON.stringify(keyPathValue)}\n\nYou need to create this rule first.`);
+                    }
+                    
+                    resultDiv.style.display = 'block';
+                    resultDiv.scrollIntoView({ behavior: 'smooth' });
+                };
+                
+                getRequest.onerror = (event) => {
+                    console.error("Error searching for rule:", event);
+                    alert("❌ Error searching database");
+                };
+                
+                tx.oncomplete = () => {
+                    db.close();
+                };
+            };
+            
+            databaseOpenRequest.onerror = (event) => {
+                console.error("Error opening database:", event);
+                alert("❌ Error opening database");
+            };
+        }
+
+        function exportData() {
+            console.log("Exporting database...");
+            const database = "authorExcuTrust";
+            const databaseOpenRequest = indexedDB.open(database);
+            
+            databaseOpenRequest.onsuccess = () => {
+                const db = databaseOpenRequest.result;
+                const tx = db.transaction("ruleStore", "readonly");
+                const store = tx.objectStore("ruleStore");
+                const getAllRequest = store.getAll();
+                
+                getAllRequest.onsuccess = () => {
+                    const allRules = getAllRequest.result;
+                    const dataStr = JSON.stringify({ ruleStore: allRules }, null, 2);
+                    
+                    // Create download link
+                    const blob = new Blob([dataStr], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `indexedDB_export_${new Date().toISOString().slice(0,10)}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    
+                    alert(`✅ Exported ${allRules.length} rule(s) to JSON file`);
+                    console.log("Exported data:", dataStr);
+                };
+                
+                tx.oncomplete = () => {
+                    db.close();
+                };
+            };
+        }
+
+        function clearDatabase() {
+            if (!confirm("⚠️ WARNING: This will delete ALL rules from the database.\n\nAre you sure you want to continue?")) {
+                return;
+            }
+            
+            if (!confirm("⚠️ FINAL WARNING: All data will be permanently lost!\n\nClick OK to proceed with deletion.")) {
+                return;
+            }
+            
+            const database = "authorExcuTrust";
+            const databaseOpenRequest = indexedDB.open(database);
+            
+            databaseOpenRequest.onsuccess = () => {
+                const db = databaseOpenRequest.result;
+                const tx = db.transaction("ruleStore", "readwrite");
+                const store = tx.objectStore("ruleStore");
+                const clearRequest = store.clear();
+                
+                clearRequest.onsuccess = () => {
+                    alert("✅ Database cleared successfully");
+                    loadAllRules(); // Refresh display
+                };
+                
+                clearRequest.onerror = (event) => {
+                    console.error("Error clearing database:", event);
+                    alert("❌ Error clearing database");
+                };
+                
+                tx.oncomplete = () => {
+                    db.close();
+                };
+            };
+        }
+    </script>
+</body>
+</html>

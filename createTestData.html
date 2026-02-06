@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Create Test Data</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    <link rel="stylesheet" href="design_system.css">
+    <link rel="stylesheet" href="modern_styles.css">
+    
+    <script src="setupIndexedDB.js"></script>
+    
+    <style>
+        .test-container {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .data-preview {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 1rem;
+            margin: 1rem 0;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .data-item {
+            background: white;
+            border-left: 4px solid #007bff;
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+            border-radius: 4px;
+        }
+        .data-item.collection {
+            border-left-color: #ffc107;
+        }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin: 0.5rem;
+        }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-warning { background: #ffc107; color: #000; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .alert {
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+        .alert-info { background: #d1ecf1; color: #0c5460; }
+        .alert-success { background: #d4edda; color: #155724; }
+        .alert-danger { background: #f8d7da; color: #721c24; }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+        .stat-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Test Data Generator</h1>
+        
+        <div class="alert alert-info">
+            <strong>ℹ️ Purpose:</strong> This tool creates comprehensive test data including Display Rules and Rule Collections for testing the system.
+        </div>
+
+        <div id="alertContainer"></div>
+
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-number" id="displayRuleCount">0</div>
+                <div>Display Rules</div>
+            </div>
+            <div class="stat-box" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <div class="stat-number" id="collectionCount">0</div>
+                <div>Collections</div>
+            </div>
+            <div class="stat-box" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                <div class="stat-number" id="totalCount">0</div>
+                <div>Total Rules</div>
+            </div>
+        </div>
+
+        <h3>Test Data Preview:</h3>
+        <div class="data-preview" id="dataPreview">
+            <p style="text-align: center; color: #666;">Data will be shown here...</p>
+        </div>
+
+        <div style="text-align: center; margin-top: 2rem;">
+            <button class="btn btn-success" onclick="createTestData()">
+                ✨ Create Test Data (Clear & Create)
+            </button>
+            <button class="btn btn-warning" onclick="addTestData()">
+                ➕ Add More Test Data (Keep Existing)
+            </button>
+            <button class="btn btn-danger" onclick="clearAllData()">
+                🗑️ Clear All Data
+            </button>
+            <button class="btn btn-secondary" onclick="window.location.href='ManageRules.html'">
+                ← Back to Rules
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Update counts
+        async function updateCounts() {
+            try {
+                const db = await openDB();
+                const tx = db.transaction('ruleStore', 'readonly');
+                const store = tx.objectStore('ruleStore');
+                const allRules = await new Promise((resolve, reject) => {
+                    const request = store.getAll();
+                    request.onsuccess = () => resolve(request.result || []);
+                    request.onerror = () => reject(request.error);
+                });
+
+                const displayRules = allRules.filter(r => r.keyPathValue[0] === 'trueruleStore');
+                const collections = allRules.filter(r => r.keyPathValue[0] === 'groupruleStore');
+
+                document.getElementById('displayRuleCount').textContent = displayRules.length;
+                document.getElementById('collectionCount').textContent = collections.length;
+                document.getElementById('totalCount').textContent = allRules.length;
+
+                showDataPreview(displayRules, collections);
+            } catch (error) {
+                console.error('Error updating counts:', error);
+            }
+        }
+
+        function showDataPreview(displayRules, collections) {
+            const preview = document.getElementById('dataPreview');
+            let html = '';
+
+            if (displayRules.length === 0 && collections.length === 0) {
+                html = '<p style="text-align: center; color: #666;">No data in database. Click "Create Test Data" to generate sample rules.</p>';
+            } else {
+                if (displayRules.length > 0) {
+                    html += '<h4 style="color: #007bff;">📋 Display Rules:</h4>';
+                    displayRules.forEach(rule => {
+                        html += `
+                            <div class="data-item">
+                                <strong>${rule.ruleID}</strong> (${rule.ruleAuthor})<br>
+                                <small>${rule.ruleContent || rule.ruleContentInnerText}</small>
+                            </div>
+                        `;
+                    });
+                }
+
+                if (collections.length > 0) {
+                    html += '<h4 style="color: #ffc107; margin-top: 1rem;">📦 Collections:</h4>';
+                    collections.forEach(coll => {
+                        html += `
+                            <div class="data-item collection">
+                                <strong>${coll.groupruleID}</strong> (${coll.groupruleAuthor})<br>
+                                <small>${coll.groupruleContent || coll.groupruleContentInnerText}</small><br>
+                                <small style="color: #666;">Logic: ${coll.ruleLogicType || 'all'} | Rules: ${(coll.allArrayID || []).join(', ')}</small>
+                            </div>
+                        `;
+                    });
+                }
+            }
+
+            preview.innerHTML = html;
+        }
+
+        // Test data sets
+        const testDisplayRules = [
+            {
+                keyPathValue: ["trueruleStore", 1, "JSM", 1, "AGE_OVER_18"],
+                ruleContent: "User must be 18 years or older",
+                ruleContentInnerText: "User must be 18 years or older",
+                ruleAuthor: "JSM",
+                ruleID: "AGE_OVER_18",
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ["trueruleStore", 1, "JSM", 1, "EMAIL_VERIFIED"],
+                ruleContent: "User email address must be verified",
+                ruleContentInnerText: "User email address must be verified",
+                ruleAuthor: "JSM",
+                ruleID: "EMAIL_VERIFIED",
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ["trueruleStore", 1, "JSM", 1, "PROFILE_COMPLETE"],
+                ruleContent: "User profile must be 100% complete",
+                ruleContentInnerText: "User profile must be 100% complete",
+                ruleAuthor: "JSM",
+                ruleID: "PROFILE_COMPLETE",
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ["trueruleStore", 1, "JSM", 1, "TERMS_ACCEPTED"],
+                ruleContent: "User must accept terms and conditions",
+                ruleContentInnerText: "User must accept terms and conditions",
+                ruleAuthor: "JSM",
+                ruleID: "TERMS_ACCEPTED",
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ["trueruleStore", 1, "JSM", 1, "PHONE_VERIFIED"],
+                ruleContent: "User phone number must be verified",
+                ruleContentInnerText: "User phone number must be verified",
+                ruleAuthor: "JSM",
+                ruleID: "PHONE_VERIFIED",
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ["trueruleStore", 1, "ADMIN", 1, "PAYMENT_METHOD_ADDED"],
+                ruleContent: "User must have a valid payment method on file",
+                ruleContentInnerText: "User must have a valid payment method on file",
+                ruleAuthor: "ADMIN",
+                ruleID: "PAYMENT_METHOD_ADDED",
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ["trueruleStore", 1, "ADMIN", 1, "ADDRESS_PROVIDED"],
+                ruleContent: "User must provide a valid shipping address",
+                ruleContentInnerText: "User must provide a valid shipping address",
+                ruleAuthor: "ADMIN",
+                ruleID: "ADDRESS_PROVIDED",
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ["trueruleStore", 1, "TEST", 1, "SUBSCRIPTION_ACTIVE"],
+                ruleContent: "User must have an active subscription",
+                ruleContentInnerText: "User must have an active subscription",
+                ruleAuthor: "TEST",
+                ruleID: "SUBSCRIPTION_ACTIVE",
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            }
+        ];
+
+        const testCollections = [
+            {
+                keyPathValue: ["groupruleStore", 1, "JSM", 1, "USER_ELIGIBILITY"],
+                groupruleContent: "User Eligibility Requirements",
+                groupruleContentInnerText: "User Eligibility Requirements",
+                groupruleAuthor: "JSM",
+                groupruleID: "USER_ELIGIBILITY",
+                ruleLogicType: "all",
+                all0Any1True: false,
+                allRowChoices: [],
+                allArrayType: ["trueruleStore", "trueruleStore"],
+                allArrayAuthor: ["JSM", "JSM"],
+                allArrayID: ["AGE_OVER_18", "EMAIL_VERIFIED"],
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ["groupruleStore", 1, "JSM", 1, "BASIC_VERIFICATION"],
+                groupruleContent: "Basic Account Verification (Any 2 of 3)",
+                groupruleContentInnerText: "Basic Account Verification (Any 2 of 3)",
+                groupruleAuthor: "JSM",
+                groupruleID: "BASIC_VERIFICATION",
+                ruleLogicType: "count",
+                minRuleCount: 2,
+                all0Any1True: false,
+                allRowChoices: [],
+                allArrayType: ["trueruleStore", "trueruleStore", "trueruleStore"],
+                allArrayAuthor: ["JSM", "JSM", "JSM"],
+                allArrayID: ["EMAIL_VERIFIED", "PHONE_VERIFIED", "PROFILE_COMPLETE"],
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ["groupruleStore", 1, "JSM", 1, "ACCOUNT_SETUP_COMPLETE"],
+                groupruleContent: "Complete Account Setup (All Required)",
+                groupruleContentInnerText: "Complete Account Setup (All Required)",
+                groupruleAuthor: "JSM",
+                groupruleID: "ACCOUNT_SETUP_COMPLETE",
+                ruleLogicType: "all",
+                all0Any1True: false,
+                allRowChoices: [],
+                allArrayType: ["trueruleStore", "trueruleStore", "trueruleStore", "trueruleStore"],
+                allArrayAuthor: ["JSM", "JSM", "JSM", "JSM"],
+                allArrayID: ["AGE_OVER_18", "EMAIL_VERIFIED", "PROFILE_COMPLETE", "TERMS_ACCEPTED"],
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ["groupruleStore", 1, "ADMIN", 1, "PURCHASE_ELIGIBILITY"],
+                groupruleContent: "Eligible to Make Purchases",
+                groupruleContentInnerText: "Eligible to Make Purchases",
+                groupruleAuthor: "ADMIN",
+                groupruleID: "PURCHASE_ELIGIBILITY",
+                ruleLogicType: "all",
+                all0Any1True: false,
+                allRowChoices: [],
+                allArrayType: ["trueruleStore", "trueruleStore", "trueruleStore"],
+                allArrayAuthor: ["JSM", "ADMIN", "ADMIN"],
+                allArrayID: ["AGE_OVER_18", "PAYMENT_METHOD_ADDED", "ADDRESS_PROVIDED"],
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ["groupruleStore", 1, "ADMIN", 1, "PREMIUM_ACCESS"],
+                groupruleContent: "Premium Features Access (At Least 75%)",
+                groupruleContentInnerText: "Premium Features Access (At Least 75%)",
+                groupruleAuthor: "ADMIN",
+                groupruleID: "PREMIUM_ACCESS",
+                ruleLogicType: "percent",
+                minRulePercent: 75,
+                all0Any1True: false,
+                allRowChoices: [],
+                allArrayType: ["trueruleStore", "trueruleStore", "trueruleStore", "trueruleStore"],
+                allArrayAuthor: ["JSM", "JSM", "JSM", "TEST"],
+                allArrayID: ["EMAIL_VERIFIED", "PHONE_VERIFIED", "PROFILE_COMPLETE", "SUBSCRIPTION_ACTIVE"],
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ["groupruleStore", 1, "TEST", 1, "QUICK_START"],
+                groupruleContent: "Quick Start (Any One Verification)",
+                groupruleContentInnerText: "Quick Start (Any One Verification)",
+                groupruleAuthor: "TEST",
+                groupruleID: "QUICK_START",
+                ruleLogicType: "any",
+                all0Any1True: true,
+                allRowChoices: [],
+                allArrayType: ["trueruleStore", "trueruleStore"],
+                allArrayAuthor: ["JSM", "JSM"],
+                allArrayID: ["EMAIL_VERIFIED", "PHONE_VERIFIED"],
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            }
+        ];
+
+        async function createTestData() {
+            if (!confirm('This will CLEAR all existing data and create fresh test data.\n\nContinue?')) {
+                return;
+            }
+
+            try {
+                showAlert('Clearing existing data...', 'info');
+                await clearAllData(false);
+
+                showAlert('Creating test data...', 'info');
+                await addTestData(false);
+
+                showAlert('✅ Test data created successfully!', 'success');
+                await updateCounts();
+            } catch (error) {
+                console.error('Error creating test data:', error);
+                showAlert('❌ Error: ' + error.message, 'danger');
+            }
+        }
+
+        async function addTestData(showConfirm = true) {
+            if (showConfirm && !confirm('This will ADD test data to existing rules.\n\nContinue?')) {
+                return;
+            }
+
+            try {
+                const db = await openDB();
+                const tx = db.transaction('ruleStore', 'readwrite');
+                const store = tx.objectStore('ruleStore');
+
+                let added = 0;
+
+                // Add display rules
+                for (const rule of testDisplayRules) {
+                    try {
+                        await new Promise((resolve, reject) => {
+                            const request = store.put(rule);
+                            request.onsuccess = () => {
+                                added++;
+                                resolve();
+                            };
+                            request.onerror = () => resolve(); // Skip if exists
+                        });
+                    } catch (e) {
+                        console.log('Skipping duplicate:', rule.ruleID);
+                    }
+                }
+
+                // Add collections
+                for (const coll of testCollections) {
+                    try {
+                        await new Promise((resolve, reject) => {
+                            const request = store.put(coll);
+                            request.onsuccess = () => {
+                                added++;
+                                resolve();
+                            };
+                            request.onerror = () => resolve(); // Skip if exists
+                        });
+                    } catch (e) {
+                        console.log('Skipping duplicate:', coll.groupruleID);
+                    }
+                }
+
+                if (showConfirm) {
+                    showAlert(`✅ Added ${added} items!`, 'success');
+                    await updateCounts();
+                }
+            } catch (error) {
+                console.error('Error adding test data:', error);
+                if (showConfirm) {
+                    showAlert('❌ Error: ' + error.message, 'danger');
+                }
+            }
+        }
+
+        async function clearAllData(showConfirm = true) {
+            if (showConfirm && !confirm('This will DELETE ALL rules and collections.\n\nAre you sure?')) {
+                return;
+            }
+
+            try {
+                const db = await openDB();
+                const tx = db.transaction('ruleStore', 'readwrite');
+                const store = tx.objectStore('ruleStore');
+                
+                await new Promise((resolve, reject) => {
+                    const request = store.clear();
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+
+                if (showConfirm) {
+                    showAlert('✅ All data cleared!', 'success');
+                    await updateCounts();
+                }
+            } catch (error) {
+                console.error('Error clearing data:', error);
+                if (showConfirm) {
+                    showAlert('❌ Error: ' + error.message, 'danger');
+                }
+            }
+        }
+
+        function showAlert(message, type = 'info') {
+            const alertContainer = document.getElementById('alertContainer');
+            alertContainer.innerHTML = `
+                <div class="alert alert-${type}">
+                    ${message}
+                </div>
+            `;
+
+            if (type === 'success') {
+                setTimeout(() => {
+                    alertContainer.innerHTML = '';
+                }, 3000);
+            }
+        }
+
+        async function openDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('authorExcuTrust');
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        // Initialize
+        window.addEventListener('DOMContentLoaded', function() {
+            updateCounts();
+        });
+    </script>
+</body>
+</html>

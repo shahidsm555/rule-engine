@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Question Generator Dashboard</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="design_system.css">
+    <link rel="stylesheet" href="modern_styles.css">
+    
+    <!-- Database Initialization -->
+    <script src="setupIndexedDB.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 3rem;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.95;
+            font-weight: 300;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            animation: fadeInUp 0.8s ease-out;
+            animation-fill-mode: both;
+        }
+
+        .card:nth-child(1) { animation-delay: 0.1s; }
+        .card:nth-child(2) { animation-delay: 0.2s; }
+        .card:nth-child(3) { animation-delay: 0.3s; }
+        .card:nth-child(4) { animation-delay: 0.4s; }
+        .card:nth-child(5) { animation-delay: 0.5s; }
+        .card:nth-child(6) { animation-delay: 0.6s; }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--card-color-start), var(--card-color-end));
+        }
+
+        .card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+        }
+
+        .card-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: #2d3748;
+        }
+
+        .card-description {
+            color: #718096;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .btn {
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+
+        .btn-secondary:hover {
+            background: #cbd5e0;
+        }
+
+        /* Card Color Themes */
+        .card-manage-rules {
+            --card-color-start: #f093fb;
+            --card-color-end: #f5576c;
+        }
+
+        .card-manage-collections {
+            --card-color-start: #4facfe;
+            --card-color-end: #00f2fe;
+        }
+
+        .card-manage-authors {
+            --card-color-start: #43e97b;
+            --card-color-end: #38f9d7;
+        }
+
+        .card-generator {
+            --card-color-start: #fa709a;
+            --card-color-end: #fee140;
+        }
+
+        .card-demo {
+            --card-color-start: #30cfd0;
+            --card-color-end: #330867;
+        }
+
+        .card-database {
+            --card-color-start: #a8edea;
+            --card-color-end: #fed6e3;
+        }
+
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            animation: fadeInUp 0.8s ease-out 0.7s;
+            animation-fill-mode: both;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            color: #718096;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 3rem;
+            opacity: 0.9;
+            animation: fadeIn 1s ease-out 1s;
+            animation-fill-mode: both;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .header p {
+                font-size: 1rem;
+            }
+
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            body {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <h1>📋 Question Generator System</h1>
+            <p>Comprehensive questionnaire and rule management platform</p>
+        </div>
+
+        <div class="stats-bar">
+            <div class="stat-card">
+                <div class="stat-number" id="totalRules">0</div>
+                <div class="stat-label">Display Rules</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalCollections">0</div>
+                <div class="stat-label">Collections</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalAuthors">0</div>
+                <div class="stat-label">Authors</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="databaseVersion">-</div>
+                <div class="stat-label">Database Version</div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Manage Rules Card -->
+            <div class="card card-manage-rules" onclick="window.location.href='ManageRules.html'">
+                <span class="card-icon">📝</span>
+                <h2 class="card-title">Manage Rules</h2>
+                <p class="card-description">
+                    View, create, edit, and delete display rules. Manage rule logic and conditions for your questionnaires.
+                </p>
+                <div class="card-actions">
+                    <a href="ManageRules.html" class="btn btn-primary">Open Manager</a>
+                    <a href="addNewRule.html" class="btn btn-secondary">Add New Rule</a>
+                </div>
+            </div>
+
+            <!-- Manage Collections Card -->
+            <div class="card card-manage-collections" onclick="window.location.href='ManageCollections.html'">
+                <span class="card-icon">📦</span>
+                <h2 class="card-title">Manage Collections</h2>
+                <p class="card-description">
+                    Create and manage rule collections with flexible evaluation logic (ALL, ANY, COUNT, PERCENT).
+                </p>
+                <div class="card-actions">
+                    <a href="ManageCollections.html" class="btn btn-primary">Open Manager</a>
+                    <a href="createCollection.html" class="btn btn-secondary">Create Collection</a>
+                </div>
+            </div>
+
+            <!-- Manage Authors Card -->
+            <div class="card card-manage-authors" onclick="window.location.href='ManageAuthors.html'">
+                <span class="card-icon">👤</span>
+                <h2 class="card-title">Manage Authors</h2>
+                <p class="card-description">
+                    Add, edit, and manage authors in your system. Track author statistics and metadata.
+                </p>
+                <div class="card-actions">
+                    <a href="ManageAuthors.html" class="btn btn-primary">Open Manager</a>
+                </div>
+            </div>
+
+            <!-- Question Generator Card -->
+            <div class="card card-generator" onclick="window.location.href='questionGeneratorSelector.html'">
+                <span class="card-icon">🎯</span>
+                <h2 class="card-title">Question Generator</h2>
+                <p class="card-description">
+                    Interactive question generation interface with dynamic rule evaluation and display logic.
+                </p>
+                <div class="card-actions">
+                    <a href="questionGeneratorSelector.html" class="btn btn-primary">Launch Generator</a>
+                </div>
+            </div>
+
+            <!-- Group Rule Demo Card -->
+            <div class="card card-demo" onclick="window.location.href='GroupRuleDemo.html'">
+                <span class="card-icon">📊</span>
+                <h2 class="card-title">Group Rule Demo</h2>
+                <p class="card-description">
+                    Interactive demonstration of ALL/ANY/COUNT/PERCENT logic evaluation with real-time testing.
+                </p>
+                <div class="card-actions">
+                    <a href="GroupRuleDemo.html" class="btn btn-primary">View Demo</a>
+                </div>
+            </div>
+
+            <!-- Database Tools Card -->
+            <div class="card card-database" onclick="window.location.href='checkDatabase.html'">
+                <span class="card-icon">🗄️</span>
+                <h2 class="card-title">Database Tools</h2>
+                <p class="card-description">
+                    Check database status, create test data, export IndexedDB data, and manage database operations.
+                </p>
+                <div class="card-actions">
+                    <a href="checkDatabase.html" class="btn btn-primary">Check Database</a>
+                    <!-- <a href="createTestData.html" class="btn btn-secondary">Test Data</a> -->
+                    <button class="btn btn-secondary" onclick="event.stopPropagation(); createSampleData();">Load Sample Data</button>
+                    <button class="btn btn-secondary" onclick="event.stopPropagation(); exportDatabaseToFile();">📥 Export Data</button>
+                    <button class="btn btn-secondary" onclick="event.stopPropagation(); document.getElementById('importFile').click();">📤 Import Data</button>
+                    <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importDatabaseFromFile(event)">
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>&copy; 2026 Question Generator System | </p>
+        </div>
+    </div>
+
+    <!-- IndexedDB Setup -->
+    <script src="setupIndexedDB.js"></script>
+
+    <script>
+        // Load statistics on page load
+        window.addEventListener('DOMContentLoaded', async function() {
+            console.log('=== Dashboard Loaded ===');
+            
+            // Wait for database initialization
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            loadStatistics();
+        });
+
+        async function loadStatistics() {
+            try {
+                const db = await openDB();
+                
+                // Update database version
+                document.getElementById('databaseVersion').textContent = db.version;
+                
+                // Get all data from ruleStore
+                const tx = db.transaction('ruleStore', 'readonly');
+                const store = tx.objectStore('ruleStore');
+                const allData = await new Promise((resolve, reject) => {
+                    const request = store.getAll();
+                    request.onsuccess = () => resolve(request.result || []);
+                    request.onerror = () => reject(request.error);
+                });
+                
+                // Count display rules and collections
+                const displayRules = allData.filter(item => 
+                    item.keyPathValue && item.keyPathValue[0] === 'trueruleStore'
+                );
+                const collections = allData.filter(item => 
+                    item.keyPathValue && item.keyPathValue[0] === 'groupruleStore'
+                );
+                
+                // Get unique authors
+                const authorsSet = new Set();
+                allData.forEach(item => {
+                    if (item.ruleAuthor) authorsSet.add(item.ruleAuthor);
+                    if (item.groupruleAuthor) authorsSet.add(item.groupruleAuthor);
+                });
+                
+                // Check authorMetadata store
+                if (db.objectStoreNames.contains('authorMetadata')) {
+                    const authorTx = db.transaction('authorMetadata', 'readonly');
+                    const authorStore = authorTx.objectStore('authorMetadata');
+                    const authorMetadata = await new Promise((resolve, reject) => {
+                        const request = authorStore.getAll();
+                        request.onsuccess = () => resolve(request.result || []);
+                        request.onerror = () => reject(request.error);
+                    });
+                    
+                    // Add authors from metadata
+                    authorMetadata.forEach(meta => {
+                        if (meta.authorName) authorsSet.add(meta.authorName);
+                    });
+                }
+                
+                // Update stats
+                animateNumber('totalRules', displayRules.length);
+                animateNumber('totalCollections', collections.length);
+                animateNumber('totalAuthors', authorsSet.size);
+                
+                db.close();
+                
+                console.log(`✓ Stats loaded: ${displayRules.length} rules, ${collections.length} collections, ${authorsSet.size} authors`);
+                
+            } catch (error) {
+                console.error('Error loading statistics:', error);
+            }
+        }
+
+        function animateNumber(elementId, targetNumber) {
+            const element = document.getElementById(elementId);
+            const duration = 1000;
+            const steps = 30;
+            const increment = targetNumber / steps;
+            let current = 0;
+            
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= targetNumber) {
+                    element.textContent = targetNumber;
+                    clearInterval(timer);
+                } else {
+                    element.textContent = Math.floor(current);
+                }
+            }, duration / steps);
+        }
+
+        async function openDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('authorExcuTrust');
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        // Prevent card click when clicking buttons
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.card a').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                });
+            });
+        });
+
+        // Create comprehensive sample data
+        async function createSampleData() {
+            try {
+                const db = await openDB();
+                
+                // Clear existing data
+                console.log('Clearing existing data...');
+                const clearTx = db.transaction('ruleStore', 'readwrite');
+                const clearStore = clearTx.objectStore('ruleStore');
+                await new Promise((resolve, reject) => {
+                    const request = clearStore.clear();
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+                
+                // Clear authorMetadata if it exists
+                if (db.objectStoreNames.contains('authorMetadata')) {
+                    const authorClearTx = db.transaction('authorMetadata', 'readwrite');
+                    const authorClearStore = authorClearTx.objectStore('authorMetadata');
+                    await new Promise((resolve, reject) => {
+                        const request = authorClearStore.clear();
+                        request.onsuccess = () => resolve();
+                        request.onerror = () => reject(request.error);
+                    });
+                    console.log('✓ Cleared authorMetadata store');
+                }
+                
+                // Create 20 authors with metadata
+                const sampleAuthors = [
+                    { authorName: 'JSM', fullName: 'John Smith', email: 'john.smith@example.com', description: 'Senior Rule Designer' },
+                    { authorName: 'AMK', fullName: 'Alice Miller', email: 'alice.miller@example.com', description: 'Lead Business Analyst' },
+                    { authorName: 'RJP', fullName: 'Robert Johnson', email: 'robert.johnson@example.com', description: 'Compliance Specialist' },
+                    { authorName: 'EMW', fullName: 'Emily Wilson', email: 'emily.wilson@example.com', description: 'Security Expert' },
+                    { authorName: 'DLH', fullName: 'David Harris', email: 'david.harris@example.com', description: 'Data Architect' },
+                    { authorName: 'STC', fullName: 'Sarah Taylor', email: 'sarah.taylor@example.com', description: 'UX Designer' },
+                    { authorName: 'MRB', fullName: 'Michael Brown', email: 'michael.brown@example.com', description: 'Product Manager' },
+                    { authorName: 'LKD', fullName: 'Laura Davis', email: 'laura.davis@example.com', description: 'Quality Engineer' },
+                    { authorName: 'JAG', fullName: 'James Anderson', email: 'james.anderson@example.com', description: 'Technical Lead' },
+                    { authorName: 'KMR', fullName: 'Karen Martinez', email: 'karen.martinez@example.com', description: 'Business Consultant' },
+                    { authorName: 'THL', fullName: 'Thomas Lee', email: 'thomas.lee@example.com', description: 'Systems Analyst' },
+                    { authorName: 'NPA', fullName: 'Nancy Parker', email: 'nancy.parker@example.com', description: 'Rule Administrator' },
+                    { authorName: 'CRW', fullName: 'Christopher White', email: 'christopher.white@example.com', description: 'Data Scientist' },
+                    { authorName: 'BJT', fullName: 'Barbara Thomas', email: 'barbara.thomas@example.com', description: 'Process Designer' },
+                    { authorName: 'PWM', fullName: 'Paul Martin', email: 'paul.martin@example.com', description: 'Integration Specialist' },
+                    { authorName: 'MJC', fullName: 'Michelle Clark', email: 'michelle.clark@example.com', description: 'Workflow Designer' },
+                    { authorName: 'GSR', fullName: 'George Rodriguez', email: 'george.rodriguez@example.com', description: 'Risk Analyst' },
+                    { authorName: 'DWL', fullName: 'Dorothy Lewis', email: 'dorothy.lewis@example.com', description: 'Audit Manager' },
+                    { authorName: 'KJW', fullName: 'Kenneth Walker', email: 'kenneth.walker@example.com', description: 'Policy Writer' },
+                    { authorName: 'HMH', fullName: 'Helen Hall', email: 'helen.hall@example.com', description: 'Documentation Lead' }
+                ];
+                
+                // Add authors to authorMetadata store if it exists
+                if (db.objectStoreNames.contains('authorMetadata')) {
+                    const authorTx = db.transaction('authorMetadata', 'readwrite');
+                    const authorStore = authorTx.objectStore('authorMetadata');
+                    
+                    for (const author of sampleAuthors) {
+                        await new Promise((resolve, reject) => {
+                            const request = authorStore.add(author);
+                            request.onsuccess = () => resolve();
+                            request.onerror = () => reject(request.error);
+                        });
+                    }
+                    console.log(`✓ Added ${sampleAuthors.length} authors to authorMetadata`);
+                } else {
+                    console.warn('⚠ authorMetadata store not found - skipping author metadata creation');
+                }
+                
+                // Create 25 Display Rules with various authors
+                const sampleRules = [
+                    { author: 'JSM', id: 'RULE_1001', desc: 'User must be authenticated', logic: 'User.isAuthenticated == true' },
+                    { author: 'JSM', id: 'RULE_1002', desc: 'User has verified email', logic: 'User.emailVerified == true' },
+                    { author: 'AMK', id: 'RULE_1003', desc: 'Account age greater than 30 days', logic: 'User.accountAgeDays > 30' },
+                    { author: 'AMK', id: 'RULE_1004', desc: 'User has completed profile', logic: 'User.profileComplete == true' },
+                    { author: 'RJP', id: 'RULE_1005', desc: 'User has active subscription', logic: 'Subscription.status == "active"' },
+                    { author: 'RJP', id: 'RULE_1006', desc: 'Subscription level is premium', logic: 'Subscription.level == "premium"' },
+                    { author: 'EMW', id: 'RULE_1007', desc: 'Two-factor authentication enabled', logic: 'Security.twoFactorEnabled == true' },
+                    { author: 'EMW', id: 'RULE_1008', desc: 'Last login within 7 days', logic: 'User.lastLoginDays <= 7' },
+                    { author: 'DLH', id: 'RULE_1009', desc: 'User has completed onboarding', logic: 'User.onboardingComplete == true' },
+                    { author: 'DLH', id: 'RULE_1010', desc: 'User location is verified', logic: 'User.locationVerified == true' },
+                    { author: 'STC', id: 'RULE_1011', desc: 'User has uploaded avatar', logic: 'User.hasAvatar == true' },
+                    { author: 'STC', id: 'RULE_1012', desc: 'User has set preferences', logic: 'User.preferencesSet == true' },
+                    { author: 'MRB', id: 'RULE_1013', desc: 'User activity score above 50', logic: 'User.activityScore > 50' },
+                    { author: 'MRB', id: 'RULE_1014', desc: 'User has made a purchase', logic: 'User.purchaseCount > 0' },
+                    { author: 'LKD', id: 'RULE_1015', desc: 'User has referrals', logic: 'User.referralCount > 0' },
+                    { author: 'LKD', id: 'RULE_1016', desc: 'User has connected social media', logic: 'User.socialConnected == true' },
+                    { author: 'JAG', id: 'RULE_1017', desc: 'User role is admin', logic: 'User.role == "admin"' },
+                    { author: 'JAG', id: 'RULE_1018', desc: 'User has API access', logic: 'User.apiAccess == true' },
+                    { author: 'KMR', id: 'RULE_1019', desc: 'User consent given', logic: 'User.consentGiven == true' },
+                    { author: 'KMR', id: 'RULE_1020', desc: 'User opted in to marketing', logic: 'User.marketingOptIn == true' },
+                    { author: 'THL', id: 'RULE_1021', desc: 'Account status is active', logic: 'Account.status == "active"' },
+                    { author: 'NPA', id: 'RULE_1022', desc: 'User has billing information', logic: 'User.hasBillingInfo == true' },
+                    { author: 'CRW', id: 'RULE_1023', desc: 'User language preference set', logic: 'User.languageSet == true' },
+                    { author: 'BJT', id: 'RULE_1024', desc: 'User timezone configured', logic: 'User.timezoneSet == true' },
+                    { author: 'PWM', id: 'RULE_1025', desc: 'User has completed tutorial', logic: 'User.tutorialComplete == true' }
+                ];
+                
+                // Create 21 Collections with various logic types
+                const sampleCollections = [
+                    { author: 'JSM', id: 'COLL_2001', desc: 'Basic User Requirements', logic: 'all', rules: ['RULE_1001', 'RULE_1002'], threshold: 0 },
+                    { author: 'AMK', id: 'COLL_2002', desc: 'Profile Completeness Check', logic: 'all', rules: ['RULE_1003', 'RULE_1004', 'RULE_1011'], threshold: 0 },
+                    { author: 'RJP', id: 'COLL_2003', desc: 'Premium Subscription Check', logic: 'all', rules: ['RULE_1005', 'RULE_1006'], threshold: 0 },
+                    { author: 'EMW', id: 'COLL_2004', desc: 'Security Requirements', logic: 'all', rules: ['RULE_1001', 'RULE_1007', 'RULE_1008'], threshold: 0 },
+                    { author: 'DLH', id: 'COLL_2005', desc: 'Onboarding Verification', logic: 'all', rules: ['RULE_1009', 'RULE_1010', 'RULE_1025'], threshold: 0 },
+                    { author: 'STC', id: 'COLL_2006', desc: 'Any User Preference Set', logic: 'any', rules: ['RULE_1011', 'RULE_1012', 'RULE_1023', 'RULE_1024'], threshold: 0 },
+                    { author: 'MRB', id: 'COLL_2007', desc: 'Active Engagement Check', logic: 'any', rules: ['RULE_1013', 'RULE_1014', 'RULE_1015'], threshold: 0 },
+                    { author: 'LKD', id: 'COLL_2008', desc: 'Social Connection Options', logic: 'any', rules: ['RULE_1016', 'RULE_1015', 'RULE_1020'], threshold: 0 },
+                    { author: 'JAG', id: 'COLL_2009', desc: 'Admin or API Access', logic: 'any', rules: ['RULE_1017', 'RULE_1018'], threshold: 0 },
+                    { author: 'KMR', id: 'COLL_2010', desc: 'Consent Requirements', logic: 'any', rules: ['RULE_1019', 'RULE_1020'], threshold: 0 },
+                    { author: 'THL', id: 'COLL_2011', desc: 'At Least 2 Security Features', logic: 'count', rules: ['RULE_1001', 'RULE_1007', 'RULE_1008', 'RULE_1010'], threshold: 2 },
+                    { author: 'NPA', id: 'COLL_2012', desc: 'At Least 3 Profile Items', logic: 'count', rules: ['RULE_1002', 'RULE_1004', 'RULE_1011', 'RULE_1012', 'RULE_1023'], threshold: 3 },
+                    { author: 'CRW', id: 'COLL_2013', desc: 'Minimum 4 Engagement Activities', logic: 'count', rules: ['RULE_1013', 'RULE_1014', 'RULE_1015', 'RULE_1016', 'RULE_1020'], threshold: 4 },
+                    { author: 'BJT', id: 'COLL_2014', desc: '50% of Authentication Features', logic: 'percent', rules: ['RULE_1001', 'RULE_1002', 'RULE_1007', 'RULE_1008'], threshold: 50 },
+                    { author: 'PWM', id: 'COLL_2015', desc: '75% Profile Completion', logic: 'percent', rules: ['RULE_1004', 'RULE_1009', 'RULE_1011', 'RULE_1012'], threshold: 75 },
+                    { author: 'MJC', id: 'COLL_2016', desc: '60% User Preferences', logic: 'percent', rules: ['RULE_1012', 'RULE_1020', 'RULE_1023', 'RULE_1024'], threshold: 60 },
+                    { author: 'GSR', id: 'COLL_2017', desc: 'Full Compliance Check', logic: 'all', rules: ['RULE_1001', 'RULE_1019', 'RULE_1021', 'RULE_1022'], threshold: 0 },
+                    { author: 'DWL', id: 'COLL_2018', desc: 'Advanced Security Bundle', logic: 'count', rules: ['RULE_1001', 'RULE_1002', 'RULE_1007', 'RULE_1008', 'RULE_1010'], threshold: 4 },
+                    { author: 'KJW', id: 'COLL_2019', desc: 'Premium Features Access', logic: 'all', rules: ['RULE_1005', 'RULE_1006', 'RULE_1022'], threshold: 0 },
+                    { author: 'HMH', id: 'COLL_2020', desc: '80% Setup Completion', logic: 'percent', rules: ['RULE_1009', 'RULE_1010', 'RULE_1012', 'RULE_1023', 'RULE_1024'], threshold: 80 },
+                    { author: 'JSM', id: 'COLL_2021', desc: 'Mixed Logic Advanced', logic: 'count', rules: ['RULE_1001', 'RULE_1004', 'RULE_1007', 'RULE_1009', 'RULE_1013', 'RULE_1016'], threshold: 3 }
+                ];
+                
+                // Add rules and collections
+                await addRulesAndCollections(db, sampleRules, sampleCollections);
+                
+                db.close();
+                
+                // Refresh statistics
+                await loadStatistics();
+                
+                // Show success message
+                alert(`Created comprehensive sample data! 📊\n\nStatistics:\n• ${sampleAuthors.length} Authors\n• ${sampleRules.length} Display Rules\n• ${sampleCollections.length} Collections\n• Total: ${sampleAuthors.length + sampleRules.length + sampleCollections.length} records\n\nData successfully loaded into the database!`);
+                
+            } catch (error) {
+                console.error('Error creating sample data:', error);
+                alert('Error creating sample data: ' + error.message);
+            }
+        }
+
+        // Helper function to add rules and collections
+        async function addRulesAndCollections(db, sampleRules, sampleCollections) {
+            const tx = db.transaction('ruleStore', 'readwrite');
+            const store = tx.objectStore('ruleStore');
+            
+            // Add Display Rules
+            for (const rule of sampleRules) {
+                const ruleData = {
+                    keyPathValue: ['trueruleStore', 1, rule.author, 1, rule.id],
+                    ruleID: rule.id,
+                    ruleDescription: rule.desc,
+                    ruleLogic: rule.logic,
+                    ruleAuthor: rule.author,
+                    ruleDateTime: new Date().toISOString()
+                };
+                
+                await new Promise((resolve, reject) => {
+                    const request = store.add(ruleData);
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            console.log(`✓ Added ${sampleRules.length} display rules`);
+            
+            // Add Collections
+            for (const coll of sampleCollections) {
+                // Build arrays for child rules - need to find the author for each rule
+                const allArrayID = coll.rules;
+                const allArrayAuthor = [];
+                const allArrayType = [];
+                
+                // Match rule IDs with their authors from sampleRules
+                for (const ruleId of coll.rules) {
+                    const foundRule = sampleRules.find(r => r.id === ruleId);
+                    if (foundRule) {
+                        allArrayAuthor.push(foundRule.author);
+                        allArrayType.push('trueruleStore');
+                    }
+                }
+                
+                const collData = {
+                    keyPathValue: ['groupruleStore', 1, coll.author, 1, coll.id],
+                    groupruleID: coll.id,
+                    groupruleContent: coll.desc,
+                    groupruleContentInnerText: coll.desc,
+                    groupruleAuthor: coll.author,
+                    ruleLogicType: coll.logic,
+                    all0Any1True: coll.logic === 'any',
+                    allRowChoices: [],
+                    allArrayType: allArrayType,
+                    allArrayAuthor: allArrayAuthor,
+                    allArrayID: allArrayID,
+                    versionDateSince1969: Date.now(),
+                    localTimeString: new Date().toString()
+                };
+                
+                // Add count/percent values if applicable
+                if (coll.logic === 'count') {
+                    collData.minRuleCount = coll.threshold;
+                } else if (coll.logic === 'percent') {
+                    collData.minRulePercent = coll.threshold;
+                }
+                
+                await new Promise((resolve, reject) => {
+                    const request = store.add(collData);
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            console.log(`✓ Added ${sampleCollections.length} collections`);
+        }
+
+        // Export database to downloadable JSON file
+        async function exportDatabaseToFile() {
+            try {
+                console.log('Starting database export...');
+                
+                const db = await openDB();
+                const exportData = {
+                    exportDate: new Date().toISOString(),
+                    databaseName: db.name,
+                    databaseVersion: db.version,
+                    stores: {}
+                };
+                
+                // Export all object stores
+                const storeNames = Array.from(db.objectStoreNames);
+                
+                for (const storeName of storeNames) {
+                    const tx = db.transaction(storeName, 'readonly');
+                    const store = tx.objectStore(storeName);
+                    
+                    const allData = await new Promise((resolve, reject) => {
+                        const request = store.getAll();
+                        request.onsuccess = () => resolve(request.result || []);
+                        request.onerror = () => reject(request.error);
+                    });
+                    
+                    exportData.stores[storeName] = allData;
+                    console.log(`✓ Exported ${allData.length} records from ${storeName}`);
+                }
+                
+                db.close();
+                
+                // Create and download JSON file
+                const jsonString = JSON.stringify(exportData, null, 2);
+                const blob = new Blob([jsonString], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `questionnaire-db-export-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                // Calculate total records
+                const totalRecords = Object.values(exportData.stores).reduce((sum, data) => sum + data.length, 0);
+                
+                alert(`✅ Database exported successfully!\n\nExported Data:\n• ${storeNames.length} object stores\n• ${totalRecords} total records\n\nFile downloaded to your Downloads folder.`);
+                console.log('✓ Database export completed successfully');
+                
+            } catch (error) {
+                console.error('Error exporting database:', error);
+                alert('❌ Error exporting database:\n' + error.message);
+            }
+        }
+
+        // Import database from JSON file
+        async function importDatabaseFromFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // Reset file input for next time
+            event.target.value = '';
+            
+            try {
+                console.log('Starting database import...');
+                
+                // Read file
+                const fileContent = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.onerror = (e) => reject(e);
+                    reader.readAsText(file);
+                });
+                
+                // Parse JSON
+                const importData = JSON.parse(fileContent);
+                
+                if (!importData.stores) {
+                    throw new Error('Invalid export file format');
+                }
+                
+                // Confirm import
+                const totalRecords = Object.values(importData.stores).reduce((sum, data) => sum + data.length, 0);
+                const confirmed = confirm(
+                    `Import Database?\n\n` +
+                    `File: ${file.name}\n` +
+                    `Exported: ${new Date(importData.exportDate).toLocaleString()}\n` +
+                    `Database: ${importData.databaseName} (v${importData.databaseVersion})\n` +
+                    `Records: ${totalRecords}\n\n` +
+                    `⚠️ WARNING: This will REPLACE all existing data!\n\n` +
+                    `Click OK to proceed or Cancel to abort.`
+                );
+                
+                if (!confirmed) {
+                    console.log('Import cancelled by user');
+                    return;
+                }
+                
+                const db = await openDB();
+                
+                // Clear and import each store
+                for (const [storeName, data] of Object.entries(importData.stores)) {
+                    if (!db.objectStoreNames.contains(storeName)) {
+                        console.warn(`⚠ Store "${storeName}" does not exist in current database - skipping`);
+                        continue;
+                    }
+                    
+                    const tx = db.transaction(storeName, 'readwrite');
+                    const store = tx.objectStore(storeName);
+                    
+                    // Clear existing data
+                    await new Promise((resolve, reject) => {
+                        const request = store.clear();
+                        request.onsuccess = () => resolve();
+                        request.onerror = () => reject(request.error);
+                    });
+                    
+                    // Import new data
+                    for (const record of data) {
+                        await new Promise((resolve, reject) => {
+                            const request = store.add(record);
+                            request.onsuccess = () => resolve();
+                            request.onerror = () => reject(request.error);
+                        });
+                    }
+                    
+                    console.log(`✓ Imported ${data.length} records to ${storeName}`);
+                }
+                
+                db.close();
+                
+                // Refresh statistics
+                await loadStatistics();
+                
+                alert(`✅ Database imported successfully!\n\n` +
+                      `Imported ${totalRecords} records from ${Object.keys(importData.stores).length} stores.\n\n` +
+                      `Your database has been updated!`);
+                
+                console.log('✓ Database import completed successfully');
+                
+            } catch (error) {
+                console.error('Error importing database:', error);
+                alert('❌ Error importing database:\n' + error.message + '\n\nPlease check the file format and try again.');
+            }
+        }
+    </script>
+</body>
+</html>

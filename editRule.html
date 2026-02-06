@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Rule</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+
+    <!-- IndexedDB Setup -->
+    <script src="setupIndexedDB.js"></script>
+
+    <style>
+        body {
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container-main {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        .form-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #007bff;
+        }
+        .form-section.collection {
+            border-left-color: #28a745;
+        }
+        .status-message {
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .status-message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status-message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .logic-type-container {
+            background: #e7f3ff;
+            border: 1px solid #2196F3;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+        }
+        .child-rules {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+        }
+        .child-rule-item {
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .btn-remove {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .hidealways { display: none !important; }
+        .readonly-field {
+            background-color: #e9ecef;
+            cursor: not-allowed;
+        }
+        h1 { color: #333; margin-bottom: 10px; }
+        .subtitle { color: #666; margin-bottom: 30px; }
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-main">
+        <h1>✏️ Edit Rule</h1>
+        <p class="subtitle" id="pageSubtitle">Modify an existing Display Rule or Rule Collection</p>
+        
+        <div id="loadingMessage" class="loading">
+            Loading rule data...
+        </div>
+
+        <div id="statusMessage" style="display: none;"></div>
+
+        <form id="editRuleForm" style="display: none;">
+            <!-- Rule Type Selection -->
+            <div class="form-section">
+                <h4>Rule Type</h4>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="ruleType" id="typeDisplayRule" value="trueruleStore" onchange="updateFormType()">
+                    <label class="form-check-label" for="typeDisplayRule">
+                        <strong>📄 Display Rule</strong> - A single condition that controls when content is shown
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="ruleType" id="typeCollection" value="groupruleStore" onchange="updateFormType()">
+                    <label class="form-check-label" for="typeCollection">
+                        <strong>📁 Rule Collection</strong> - A group of rules with logic (ALL/ANY/COUNT/PERCENT)
+                    </label>
+                </div>
+                <small class="form-text text-muted" style="color: #dc3545; margin-top: 10px;">⚠️ Changing rule type will clear type-specific data</small>
+            </div>
+
+            <!-- Basic Information -->
+            <div class="form-section" id="basicInfo">
+                <h4>Basic Information</h4>
+                <div class="form-group">
+                    <label for="ruleAuthor"><strong>Author:</strong></label>
+                    <select class="form-control" id="ruleAuthor">
+                        <option value="">-- Select Author --</option>
+                    </select>
+                    <small class="form-text text-muted">You can change the author if needed</small>
+                </div>
+                <div class="form-group">
+                    <label for="ruleID"><strong>Rule ID:</strong></label>
+                    <input type="text" class="form-control readonly-field" id="ruleID" readonly>
+                    <small class="form-text text-muted">Rule ID cannot be changed after creation</small>
+                </div>
+                <div class="form-group">
+                    <label for="ruleDescription"><strong>Description/Title:</strong></label>
+                    <textarea class="form-control" id="ruleDescription" rows="2"></textarea>
+                    <small class="form-text text-muted">Update the description of what this rule does</small>
+                </div>
+            </div>
+
+            <!-- Display Rule Specific Fields -->
+            <div class="form-section hidealways" id="displayRuleFields">
+                <h4>Display Rule Logic</h4>
+                <div class="form-group">
+                    <label for="ruleLogic"><strong>Rule Logic:</strong></label>
+                    <textarea class="form-control" id="ruleLogic" rows="3" placeholder="e.g., User.age >= 18"></textarea>
+                    <small class="form-text text-muted">JavaScript expression that evaluates to true/false</small>
+                </div>
+            </div>
+
+            <!-- Collection Logic (Only for Rule Collections) -->
+            <div class="form-section collection hidealways" id="collectionLogic">
+                <h4>Rule Evaluation Logic</h4>
+                <p style="margin-bottom: 15px;">Choose how child rules should be evaluated:</p>
+                
+                <div class="logic-type-container">
+                    <div class="form-group">
+                        <label for="ruleLogicType"><strong>Select Logic Type:</strong></label>
+                        <select id="ruleLogicType" class="form-control" onchange="updateLogicDisplay()">
+                            <option value="all">All rules must be true (AND)</option>
+                            <option value="any">Any rule must be true (OR)</option>
+                            <option value="count">At least N rules must be true</option>
+                            <option value="percent">At least X% of rules must be true</option>
+                        </select>
+                    </div>
+                    
+                    <div id="countInput" class="form-group hidealways">
+                        <label for="minRuleCount"><strong>Minimum Rules Required:</strong></label>
+                        <input type="number" id="minRuleCount" class="form-control" min="1" value="2" style="max-width: 150px;" onchange="updateLogicDisplay()">
+                    </div>
+                    
+                    <div id="percentInput" class="form-group hidealways">
+                        <label for="minRulePercent"><strong>Minimum Percentage Required:</strong></label>
+                        <input type="number" id="minRulePercent" class="form-control" min="1" max="100" value="50" style="max-width: 150px;" onchange="updateLogicDisplay()">
+                        <small class="form-text text-muted">Enter value between 1-100</small>
+                    </div>
+                    
+                    <div class="alert alert-success" style="margin-top: 15px; margin-bottom: 0;">
+                        <span id="logicDisplayText">Display when <strong>all</strong> child rules are true</span>
+                    </div>
+                </div>
+
+                <!-- Child Rules -->
+                <div class="child-rules">
+                    <h5>Child Rules:</h5>
+                    <div id="childRulesList">
+                        <p style="color: #666;">No child rules added yet</p>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <h6>Add Child Rule:</h6>
+                        <div class="form-row">
+                            <div class="col-md-8">
+                                <select class="form-control" id="childRuleSelect">
+                                    <option value="">-- Select a Display Rule --</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <button type="button" class="btn btn-success btn-block" onclick="addChildRule()">➕ Add Rule</button>
+                            </div>
+                        </div>
+                        <small class="form-text text-muted">Select from existing Display Rules (Collections cannot be added as children)</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div style="text-align: center; margin: 30px 0;">
+                <button type="button" class="btn btn-primary btn-lg" onclick="saveChanges()">💾 Save Changes</button>
+                <button type="button" class="btn btn-secondary btn-lg" onclick="goBack()">← Cancel</button>
+                <button type="button" class="btn btn-danger btn-lg" onclick="deleteCurrentRule()">🗑️ Delete Rule</button>
+                <button type="button" class="btn btn-outline-secondary" onclick="closeForm()">✖️ Close</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        let currentRule = null;
+        let ruleType = null;
+        let ruleAuthor = null;
+        let ruleId = null;
+        let childRules = [];
+        let allAuthors = [];
+        let availableDisplayRules = [];
+
+        // Parse URL parameters
+        function getUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            return {
+                action: params.get('action'),
+                type: params.get('type'),
+                author: params.get('author'),
+                id: params.get('id')
+            };
+        }
+
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', async function() {
+            initialSetupIndexedDB();
+            
+            const params = getUrlParams();
+            
+            if (!params.action || params.action !== 'edit' || !params.type || !params.author || !params.id) {
+                showStatus('Invalid URL parameters. Please use a valid edit link.', 'error');
+                document.getElementById('loadingMessage').style.display = 'none';
+                return;
+            }
+
+            ruleType = params.type;
+            ruleAuthor = decodeURIComponent(params.author);
+            ruleId = decodeURIComponent(params.id);
+
+            await loadAuthors();
+            await loadRuleData();
+        });
+
+        // Load authors and display rules from database
+        async function loadAuthors() {
+            try {
+                const db = await openDB();
+                
+                const stores = [];
+                if (db.objectStoreNames.contains('ruleStore')) stores.push('ruleStore');
+                if (db.objectStoreNames.contains('authorMetadata')) stores.push('authorMetadata');
+                
+                if (stores.length === 0) {
+                    console.log("No stores available");
+                    db.close();
+                    return;
+                }
+                
+                const tx = db.transaction(stores, 'readonly');
+                
+                // Get authors from metadata store
+                let authorMetadata = [];
+                if (db.objectStoreNames.contains('authorMetadata')) {
+                    const authorStore = tx.objectStore('authorMetadata');
+                    authorMetadata = await new Promise((resolve, reject) => {
+                        const request = authorStore.getAll();
+                        request.onsuccess = () => resolve(request.result || []);
+                        request.onerror = () => reject(request.error);
+                    });
+                }
+                
+                // Get unique authors and display rules
+                let ruleAuthors = new Set();
+                if (db.objectStoreNames.contains('ruleStore')) {
+                    const ruleStore = tx.objectStore('ruleStore');
+                    const allRules = await new Promise((resolve, reject) => {
+                        const request = ruleStore.getAll();
+                        request.onsuccess = () => resolve(request.result || []);
+                        request.onerror = () => reject(request.error);
+                    });
+                    
+                    // Extract authors and filter display rules
+                    availableDisplayRules = [];
+                    allRules.forEach(rule => {
+                        const authorName = rule.ruleAuthor || rule.groupruleAuthor;
+                        if (authorName) ruleAuthors.add(authorName);
+                        
+                        // Only add Display Rules (trueruleStore) to available list
+                        if (rule.keyPathValue && rule.keyPathValue[0] === 'trueruleStore') {
+                            availableDisplayRules.push({
+                                author: rule.ruleAuthor,
+                                id: rule.ruleID,
+                                description: rule.ruleContent || rule.ruleContentInnerText || 'No description'
+                            });
+                        }
+                    });
+                    
+                    availableDisplayRules.sort((a, b) => {
+                        if (a.author !== b.author) return a.author.localeCompare(b.author);
+                        return a.id.localeCompare(b.id);
+                    });
+                }
+                
+                // Combine authors from both sources
+                const authorsSet = new Set();
+                authorMetadata.forEach(author => authorsSet.add(author.authorName));
+                ruleAuthors.forEach(author => authorsSet.add(author));
+                
+                allAuthors = Array.from(authorsSet).sort();
+                
+                db.close();
+                
+                console.log(`Loaded ${allAuthors.length} authors`);
+                console.log(`Loaded ${availableDisplayRules.length} display rules for selection`);
+                
+                // Populate dropdowns
+                populateAuthorDropdown();
+                populateChildRuleDropdown();
+                
+            } catch (error) {
+                console.error("Error loading authors:", error);
+            }
+        }
+
+        function populateAuthorDropdown() {
+            const authorSelect = document.getElementById('ruleAuthor');
+            authorSelect.innerHTML = '<option value="">-- Select Author --</option>';
+            
+            allAuthors.forEach(author => {
+                const option = document.createElement('option');
+                option.value = author;
+                option.textContent = author;
+                authorSelect.appendChild(option);
+            });
+        }
+
+        function populateChildRuleDropdown() {
+            const childRuleSelect = document.getElementById('childRuleSelect');
+            childRuleSelect.innerHTML = '<option value="">-- Select a Display Rule --</option>';
+            
+            if (availableDisplayRules.length === 0) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = '(No Display Rules available)';
+                option.disabled = true;
+                childRuleSelect.appendChild(option);
+                return;
+            }
+            
+            availableDisplayRules.forEach(rule => {
+                const option = document.createElement('option');
+                option.value = JSON.stringify({ author: rule.author, id: rule.id });
+                option.textContent = `${rule.author} / ${rule.id} - ${rule.description.substring(0, 50)}${rule.description.length > 50 ? '...' : ''}`;
+                childRuleSelect.appendChild(option);
+            });
+        }
+
+        async function loadRuleData() {
+            try {
+                const db = await openDB();
+                
+                const tx = db.transaction('ruleStore', 'readonly');
+                const store = tx.objectStore('ruleStore');
+                const getAllRequest = store.getAll();
+                
+                const allRules = await new Promise((resolve, reject) => {
+                    getAllRequest.onsuccess = () => resolve(getAllRequest.result || []);
+                    getAllRequest.onerror = () => reject(getAllRequest.error);
+                });
+                
+                // Find the matching rule
+                const matchingRule = allRules.find(rule => {
+                    return rule.keyPathValue[0] === ruleType &&
+                           rule.keyPathValue[2] === ruleAuthor &&
+                           rule.keyPathValue[4] === ruleId;
+                });
+                
+                if (!matchingRule) {
+                    document.getElementById('loadingMessage').style.display = 'none';
+                    showStatus(`Rule not found: ${ruleType} / ${ruleAuthor} / ${ruleId}`, 'error');
+                    return;
+                }
+
+                currentRule = matchingRule;
+                populateForm();
+                
+                document.getElementById('loadingMessage').style.display = 'none';
+                document.getElementById('editRuleForm').style.display = 'block';
+            } catch (error) {
+                console.error('Error loading rule:', error);
+                showStatus('Error loading rule: ' + error.message, 'error');
+                document.getElementById('loadingMessage').style.display = 'none';
+            }
+        }
+
+        function updateFormType() {
+            const selectedType = document.querySelector('input[name="ruleType"]:checked').value;
+            const displayRuleFields = document.getElementById('displayRuleFields');
+            const collectionLogic = document.getElementById('collectionLogic');
+            
+            if (selectedType === 'trueruleStore') {
+                displayRuleFields.classList.remove('hidealways');
+                collectionLogic.classList.add('hidealways');
+            } else {
+                displayRuleFields.classList.add('hidealways');
+                collectionLogic.classList.remove('hidealways');
+            }
+            
+            // Warn user if changing from original type
+            if (selectedType !== ruleType) {
+                console.warn('Rule type changed from', ruleType, 'to', selectedType);
+            }
+        }
+
+        function populateForm() {
+            // Set rule type radio buttons
+            if (ruleType === 'trueruleStore') {
+                document.getElementById('typeDisplayRule').checked = true;
+            } else {
+                document.getElementById('typeCollection').checked = true;
+            }
+            
+            // Set basic fields
+            document.getElementById('ruleAuthor').value = currentRule.ruleAuthor || currentRule.groupruleAuthor || '';
+            document.getElementById('ruleID').value = currentRule.ruleID || currentRule.groupruleID || '';
+            
+            // Show appropriate sections based on rule type
+            if (ruleType === 'trueruleStore') {
+                // Display Rule
+                document.getElementById('displayRuleFields').classList.remove('hidealways');
+                document.getElementById('collectionLogic').classList.add('hidealways');
+                
+                const ruleContent = currentRule.ruleContent || currentRule.ruleContentInnerText || '';
+                document.getElementById('ruleDescription').value = ruleContent;
+                document.getElementById('ruleLogic').value = currentRule.ruleLogic || '';
+                
+            } else {
+                // Collection
+                document.getElementById('displayRuleFields').classList.add('hidealways');
+                document.getElementById('collectionLogic').classList.remove('hidealways');
+                
+                const groupruleContent = currentRule.groupruleContent || currentRule.groupruleContentInnerText || '';
+                document.getElementById('ruleDescription').value = groupruleContent;
+                
+                // Set logic type
+                const logicType = currentRule.ruleLogicType || 'all';
+                document.getElementById('ruleLogicType').value = logicType;
+                
+                // Set thresholds
+                if (logicType === 'count') {
+                    document.getElementById('minRuleCount').value = currentRule.minRuleCount || 2;
+                } else if (logicType === 'percent') {
+                    document.getElementById('minRulePercent').value = currentRule.minRulePercent || 50;
+                }
+                
+                // Load child rules
+                const allArrayID = currentRule.allArrayID || [];
+                const allArrayAuthor = currentRule.allArrayAuthor || [];
+                
+                childRules = [];
+                for (let i = 0; i < allArrayID.length; i++) {
+                    childRules.push({
+                        author: allArrayAuthor[i] || '',
+                        id: allArrayID[i] || ''
+                    });
+                }
+                
+                updateLogicDisplay();
+                updateChildRulesList();
+            }
+        }
+
+        function updateLogicDisplay() {
+            const logicType = document.getElementById('ruleLogicType').value;
+            const countInput = document.getElementById('countInput');
+            const percentInput = document.getElementById('percentInput');
+            const displayText = document.getElementById('logicDisplayText');
+            
+            countInput.classList.add('hidealways');
+            percentInput.classList.add('hidealways');
+            
+            switch(logicType) {
+                case 'all':
+                    displayText.innerHTML = 'Display when <strong>all</strong> child rules are true';
+                    break;
+                case 'any':
+                    displayText.innerHTML = 'Display when <strong>any</strong> child rule is true';
+                    break;
+                case 'count':
+                    countInput.classList.remove('hidealways');
+                    const count = document.getElementById('minRuleCount').value;
+                    displayText.innerHTML = `Display when at least <strong>${count}</strong> child rule(s) are true`;
+                    break;
+                case 'percent':
+                    percentInput.classList.remove('hidealways');
+                    const percent = document.getElementById('minRulePercent').value;
+                    displayText.innerHTML = `Display when at least <strong>${percent}%</strong> of child rules are true`;
+                    break;
+            }
+        }
+
+        function addChildRule() {
+            const childRuleSelect = document.getElementById('childRuleSelect');
+            const selectedValue = childRuleSelect.value;
+            
+            if (!selectedValue) {
+                alert('Please select a Display Rule from the dropdown');
+                return;
+            }
+            
+            const ruleData = JSON.parse(selectedValue);
+            const author = ruleData.author;
+            const id = ruleData.id;
+            
+            // Check if already exists
+            if (childRules.some(r => r.author === author && r.id === id)) {
+                alert('This rule has already been added');
+                return;
+            }
+            
+            childRules.push({ author, id });
+            updateChildRulesList();
+            
+            // Reset dropdown
+            childRuleSelect.value = '';
+        }
+
+        function removeChildRule(index) {
+            childRules.splice(index, 1);
+            updateChildRulesList();
+        }
+
+        function updateChildRulesList() {
+            const listDiv = document.getElementById('childRulesList');
+            
+            if (childRules.length === 0) {
+                listDiv.innerHTML = '<p style="color: #666;">No child rules added yet</p>';
+                return;
+            }
+            
+            let htmGet selected rule type (may have changed)
+                const selectedType = document.querySelector('input[name="ruleType"]:checked').value;
+                const isTypeChanged = (selectedType !== ruleType);
+                
+                // Warn if type is being changed
+                if (isTypeChanged) {
+                    if (!confirm('⚠️ WARNING: You are changing the rule type!\n\nChanging from ' + 
+                        (ruleType === 'trueruleStore' ? 'Display Rule' : 'Collection') + 
+                        ' to ' + 
+                        (selectedType === 'trueruleStore' ? 'Display Rule' : 'Collection') + 
+                        ' will restructure the data.\n\nAre you sure you want to continue?')) {
+                        return;
+                    }
+                }
+                
+                // Update keyPathValue with new author and type
+                currentRule.keyPathValue[0] = selectedType;
+                currentRule.keyPathValue[2] = newAuthor;
+                
+                // Update timestamp
+                currentRule.versionDateSince1969 = Date.now();
+                currentRule.localTimeString = new Date().toString();
+
+                // Update specific fields based on SELECTED rule type
+                if (selected
+            
+            listDiv.innerHTML = html;
+        }
+
+        async function saveChanges() {
+            try {
+                // Update author (can be changed)
+                const newAuthor = document.getElementById('ruleAuthor').value;
+                if (!newAuthor) {
+                    showStatus('Please select an author', 'error');
+                    return;
+                }
+                
+                // Update keyPathValue with new author
+                currentRule.keyPathValue[2] = newAuthor;
+                
+                // Update timestamp
+                currentRule.versionDateSince1969 = Date.now();
+                currentRule.localTimeString = new Date().toString();
+currentRule.ruleID = ruleId;
+                    
+                    // Clean up collection-specific fields if changed from collection
+                    if (isTypeChanged) {
+                        delete currentRule.groupruleContent;
+                        delete currentRule.groupruleContentInnerText;
+                        delete currentRule.groupruleAuthor;
+                        delete currentRule.groupruleID;
+                        delete currentRule.ruleLogicType;
+                        delete currentRule.all0Any1True;
+                        delete currentRule.allArrayID;
+                        delete currentRule.allArrayAuthor;
+                        delete currentRule.allArrayType;
+                        delete currentRule.allRowChoices;
+                        delete currentRule.minRuleCount;
+                        delete currentRule.minRulePercent;
+                    }
+                    
+                // Update specific fields based on rule type
+                if (ruleType ===groupruleID = ruleId;
+                    currentRule.ruleLogicType = logicType;
+                    currentRule.all0Any1True = (logicType === 'any');
+                    
+                    // Build arrays for child rules
+                    currentRule.allArrayID = childRules.map(r => r.id);
+                    currentRule.allArrayAuthor = childRules.map(r => r.author);
+                    currentRule.allArrayType = childRules.map(() => 'trueruleStore');
+                    currentRule.allRowChoices = [];
+                    
+                    // Set thresholds
+                    if (logicType === 'count') {
+                        currentRule.minRuleCount = parseInt(document.getElementById('minRuleCount').value);
+                        delete currentRule.minRulePercent;
+                    } else if (logicType === 'percent') {
+                        currentRule.minRulePercent = parseInt(document.getElementById('minRulePercent').value);
+                        delete currentRule.minRuleCount;
+                    } else {
+                        delete currentRule.minRuleCount;
+                        delete currentRule.minRulePercent;
+                    }
+                    
+                    // Clean up display rule-specific fields if changed from display rule
+                    if (isTypeChanged) {
+                        delete currentRule.ruleContent;
+                        delete currentRule.ruleContentInnerText;
+                        delete currentRule.ruleLogic;
+                        delete currentRule.ruleAuthor;
+                        delete currentRule.ruleIDById('ruleLogicType').value;
+                    
+                    if (!groupruleContent) {
+                        showStatus('Please enter a collection description', 'error');
+                        return;
+                    }
+                    
+                    if (childRules.length === 0) {
+                        showStatus('Please add at least one child rule', 'error');
+                        return;
+                    }
+                    
+                    currentRule.groupruleContent = groupruleContent;
+                    currentRule.groupruleContentInnerText = groupruleContent;
+                    currentRule.groupruleAuthor = newAuthor;
+                    currentRule.ruleLogicType = logicType;
+                    currentRule.all0Any1True = (logicType === 'any');
+                    
+                    // Build arrays for child rules
+                    currentRule.allArrayID = childRules.map(r => r.id);
+                    currentRule.allArrayAuthor = childRules.map(r => r.author);
+                    currentRule.allArrayType = childRules.map(() => 'trueruleStore');
+                    currentRule.allRowChoices = [];
+                    
+                    // Set thresholds
+                    if (logicType === 'count') {
+                        currentRule.minRuleCount = parseInt(document.getElementById('minRuleCount').value);
+                        delete currentRule.minRulePercent;
+                    } else if (logicType === 'percent') {
+                        currentRule.minRulePercent = parseInt(document.getElementById('minRulePercent').value);
+                        delete currentRule.minRuleCount;
+                    } else {
+                        delete currentRule.minRuleCount;
+                        delete currentRule.minRulePercent;
+                    }
+                }
+
+                // Save to database
+                const db = await openDB();
+                const tx = db.transaction('ruleStore', 'readwrite');
+                const store = tx.objectStore('ruleStore');
+                
+                await new Promise((resolve, reject) => {
+                    const request = store.put(currentRule);
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+
+                showStatus('✅ Rule saved successfully!', 'success');
+                
+                // Redirect back after short delay
+                setTimeout(() => {
+                    window.location.href = 'ManageRules.html';
+                }, 1500);
+            } catch (error) {
+                console.error('Error saving rule:', error);
+                showStatus('Error saving rule: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteCurrentRule() {
+            if (!confirm('⚠️ Are you sure you want to delete this rule?\n\nThis action cannot be undone.')) {
+                return;
+            }
+
+            try {
+                const db = await openDB();
+                const tx = db.transaction('ruleStore', 'readwrite');
+                const store = tx.objectStore('ruleStore');
+                
+                await new Promise((resolve, reject) => {
+                    const request = store.delete(currentRule.keyPathValue);
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+                
+                showStatus('✅ Rule deleted successfully!', 'success');
+                
+                setTimeout(() => {
+                    window.location.href = 'ManageRules.html';
+                }, 1500);
+            } catch (error) {
+                console.error('Error deleting rule:', error);
+                showStatus('Error deleting rule: ' + error.message, 'error');
+            }
+        }
+
+        function closeForm() {
+            if (confirm('Close this form? Any unsaved changes will be lost.')) {
+                window.location.href = 'ManageRules.html';
+            }
+        }
+
+        function goBack() {
+            if (confirm('Cancel editing? Any unsaved changes will be lost.')) {
+                window.location.href = 'ManageRules.html';
+            }
+        }
+
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.className = 'status-message ' + type;
+            statusDiv.innerHTML = message;
+            statusDiv.style.display = 'block';
+            
+            // Auto-hide success messages
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        // Helper function to open database
+        async function openDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('authorExcuTrust');
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+    </script>
+</body>
+</html>
