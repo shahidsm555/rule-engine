@@ -587,29 +587,29 @@
                     { author: 'PWM', id: 'RULE_1025', desc: 'User has completed tutorial', logic: 'User.tutorialComplete == true' }
                 ];
                 
-                // Create 21 Collections with various logic types
+                // Create 21 Collections with enhanced logic types (gt, gte, lt, eq, percent)
                 const sampleCollections = [
-                    { author: 'JSM', id: 'COLL_2001', desc: 'Basic User Requirements', logic: 'all', rules: ['RULE_1001', 'RULE_1002'], threshold: 0 },
-                    { author: 'AMK', id: 'COLL_2002', desc: 'Profile Completeness Check', logic: 'all', rules: ['RULE_1003', 'RULE_1004', 'RULE_1011'], threshold: 0 },
-                    { author: 'RJP', id: 'COLL_2003', desc: 'Premium Subscription Check', logic: 'all', rules: ['RULE_1005', 'RULE_1006'], threshold: 0 },
-                    { author: 'EMW', id: 'COLL_2004', desc: 'Security Requirements', logic: 'all', rules: ['RULE_1001', 'RULE_1007', 'RULE_1008'], threshold: 0 },
-                    { author: 'DLH', id: 'COLL_2005', desc: 'Onboarding Verification', logic: 'all', rules: ['RULE_1009', 'RULE_1010', 'RULE_1025'], threshold: 0 },
-                    { author: 'STC', id: 'COLL_2006', desc: 'Any User Preference Set', logic: 'any', rules: ['RULE_1011', 'RULE_1012', 'RULE_1023', 'RULE_1024'], threshold: 0 },
-                    { author: 'MRB', id: 'COLL_2007', desc: 'Active Engagement Check', logic: 'any', rules: ['RULE_1013', 'RULE_1014', 'RULE_1015'], threshold: 0 },
-                    { author: 'LKD', id: 'COLL_2008', desc: 'Social Connection Options', logic: 'any', rules: ['RULE_1016', 'RULE_1015', 'RULE_1020'], threshold: 0 },
-                    { author: 'JAG', id: 'COLL_2009', desc: 'Admin or API Access', logic: 'any', rules: ['RULE_1017', 'RULE_1018'], threshold: 0 },
-                    { author: 'KMR', id: 'COLL_2010', desc: 'Consent Requirements', logic: 'any', rules: ['RULE_1019', 'RULE_1020'], threshold: 0 },
-                    { author: 'THL', id: 'COLL_2011', desc: 'At Least 2 Security Features', logic: 'count', rules: ['RULE_1001', 'RULE_1007', 'RULE_1008', 'RULE_1010'], threshold: 2 },
-                    { author: 'NPA', id: 'COLL_2012', desc: 'At Least 3 Profile Items', logic: 'count', rules: ['RULE_1002', 'RULE_1004', 'RULE_1011', 'RULE_1012', 'RULE_1023'], threshold: 3 },
-                    { author: 'CRW', id: 'COLL_2013', desc: 'Minimum 4 Engagement Activities', logic: 'count', rules: ['RULE_1013', 'RULE_1014', 'RULE_1015', 'RULE_1016', 'RULE_1020'], threshold: 4 },
-                    { author: 'BJT', id: 'COLL_2014', desc: '50% of Authentication Features', logic: 'percent', rules: ['RULE_1001', 'RULE_1002', 'RULE_1007', 'RULE_1008'], threshold: 50 },
-                    { author: 'PWM', id: 'COLL_2015', desc: '75% Profile Completion', logic: 'percent', rules: ['RULE_1004', 'RULE_1009', 'RULE_1011', 'RULE_1012'], threshold: 75 },
-                    { author: 'MJC', id: 'COLL_2016', desc: '60% User Preferences', logic: 'percent', rules: ['RULE_1012', 'RULE_1020', 'RULE_1023', 'RULE_1024'], threshold: 60 },
-                    { author: 'GSR', id: 'COLL_2017', desc: 'Full Compliance Check', logic: 'all', rules: ['RULE_1001', 'RULE_1019', 'RULE_1021', 'RULE_1022'], threshold: 0 },
-                    { author: 'DWL', id: 'COLL_2018', desc: 'Advanced Security Bundle', logic: 'count', rules: ['RULE_1001', 'RULE_1002', 'RULE_1007', 'RULE_1008', 'RULE_1010'], threshold: 4 },
-                    { author: 'KJW', id: 'COLL_2019', desc: 'Premium Features Access', logic: 'all', rules: ['RULE_1005', 'RULE_1006', 'RULE_1022'], threshold: 0 },
-                    { author: 'HMH', id: 'COLL_2020', desc: '80% Setup Completion', logic: 'percent', rules: ['RULE_1009', 'RULE_1010', 'RULE_1012', 'RULE_1023', 'RULE_1024'], threshold: 80 },
-                    { author: 'JSM', id: 'COLL_2021', desc: 'Mixed Logic Advanced', logic: 'count', rules: ['RULE_1001', 'RULE_1004', 'RULE_1007', 'RULE_1009', 'RULE_1013', 'RULE_1016'], threshold: 3 }
+                    { author: 'JSM', id: 'COLL_2001', desc: 'Basic User Requirements (ALL)', logic: 'all', rules: ['RULE_1001', 'RULE_1002'], threshold: 0 },
+                    { author: 'AMK', id: 'COLL_2002', desc: 'Profile Completeness (ALL)', logic: 'all', rules: ['RULE_1003', 'RULE_1004', 'RULE_1011'], threshold: 0 },
+                    { author: 'RJP', id: 'COLL_2003', desc: 'Premium Subscription (ALL)', logic: 'all', rules: ['RULE_1005', 'RULE_1006'], threshold: 0 },
+                    { author: 'EMW', id: 'COLL_2004', desc: 'Security Requirements (ALL)', logic: 'all', rules: ['RULE_1001', 'RULE_1007', 'RULE_1008'], threshold: 0 },
+                    { author: 'DLH', id: 'COLL_2005', desc: 'Onboarding Verification (ALL)', logic: 'all', rules: ['RULE_1009', 'RULE_1010', 'RULE_1025'], threshold: 0 },
+                    { author: 'STC', id: 'COLL_2006', desc: 'Any User Preference Set (ANY)', logic: 'any', rules: ['RULE_1011', 'RULE_1012', 'RULE_1023', 'RULE_1024'], threshold: 0 },
+                    { author: 'MRB', id: 'COLL_2007', desc: 'Active Engagement (ANY)', logic: 'any', rules: ['RULE_1013', 'RULE_1014', 'RULE_1015'], threshold: 0 },
+                    { author: 'LKD', id: 'COLL_2008', desc: 'Social Connection Options (ANY)', logic: 'any', rules: ['RULE_1016', 'RULE_1015', 'RULE_1020'], threshold: 0 },
+                    { author: 'JAG', id: 'COLL_2009', desc: 'Admin or API Access (ANY)', logic: 'any', rules: ['RULE_1017', 'RULE_1018'], threshold: 0 },
+                    { author: 'KMR', id: 'COLL_2010', desc: 'Consent Requirements (ANY)', logic: 'any', rules: ['RULE_1019', 'RULE_1020'], threshold: 0 },
+                    { author: 'THL', id: 'COLL_2011', desc: 'At Least 2 Security Features (GTE)', logic: 'gte', rules: ['RULE_1001', 'RULE_1007', 'RULE_1008', 'RULE_1010'], threshold: 2 },
+                    { author: 'NPA', id: 'COLL_2012', desc: 'At Least 3 Profile Items (GTE)', logic: 'gte', rules: ['RULE_1002', 'RULE_1004', 'RULE_1011', 'RULE_1012', 'RULE_1023'], threshold: 3 },
+                    { author: 'CRW', id: 'COLL_2013', desc: 'More Than 3 Engagement Activities (GT)', logic: 'gt', rules: ['RULE_1013', 'RULE_1014', 'RULE_1015', 'RULE_1016', 'RULE_1020'], threshold: 3 },
+                    { author: 'BJT', id: 'COLL_2014', desc: '50% of Authentication Features (PERCENT)', logic: 'percent', rules: ['RULE_1001', 'RULE_1002', 'RULE_1007', 'RULE_1008'], threshold: 50 },
+                    { author: 'PWM', id: 'COLL_2015', desc: '75% Profile Completion (PERCENT)', logic: 'percent', rules: ['RULE_1004', 'RULE_1009', 'RULE_1011', 'RULE_1012'], threshold: 75 },
+                    { author: 'MJC', id: 'COLL_2016', desc: '60% User Preferences (PERCENT)', logic: 'percent', rules: ['RULE_1012', 'RULE_1020', 'RULE_1023', 'RULE_1024'], threshold: 60 },
+                    { author: 'GSR', id: 'COLL_2017', desc: 'Full Compliance Check (ALL)', logic: 'all', rules: ['RULE_1001', 'RULE_1019', 'RULE_1021', 'RULE_1022'], threshold: 0 },
+                    { author: 'DWL', id: 'COLL_2018', desc: 'Exactly 4 Security Items (EQ)', logic: 'eq', rules: ['RULE_1001', 'RULE_1002', 'RULE_1007', 'RULE_1008', 'RULE_1010'], threshold: 4 },
+                    { author: 'KJW', id: 'COLL_2019', desc: 'Fewer Than 2 Requirements (LT)', logic: 'lt', rules: ['RULE_1005', 'RULE_1006', 'RULE_1022'], threshold: 2 },
+                    { author: 'HMH', id: 'COLL_2020', desc: '80% Setup Completion (PERCENT)', logic: 'percent', rules: ['RULE_1009', 'RULE_1010', 'RULE_1012', 'RULE_1023', 'RULE_1024'], threshold: 80 },
+                    { author: 'JSM', id: 'COLL_2021', desc: 'At Least 3 Advanced Features (GTE)', logic: 'gte', rules: ['RULE_1001', 'RULE_1004', 'RULE_1007', 'RULE_1009', 'RULE_1013', 'RULE_1016'], threshold: 3 }
                 ];
                 
                 // Add rules and collections
@@ -670,7 +670,7 @@
                 }
                 
                 const collData = {
-                    keyPathValue: ['groupruleStore', 1, coll.author, 1, coll.id],
+                    keyPathValue: ['groupruleStore', coll.author, coll.id],
                     groupruleID: coll.id,
                     groupruleContent: coll.desc,
                     groupruleContentInnerText: coll.desc,
@@ -685,11 +685,19 @@
                     localTimeString: new Date().toString()
                 };
                 
-                // Add count/percent values if applicable
-                if (coll.logic === 'count') {
-                    collData.minRuleCount = coll.threshold;
+                // Add count/percent values with calculated equivalents for enhanced logic types
+                const totalRules = coll.rules.length;
+                
+                if (['gt', 'gte', 'lt', 'eq'].includes(coll.logic)) {
+                    const countValue = coll.threshold;
+                    const computedPercent = totalRules > 0 ? (countValue / totalRules) * 100 : 0;
+                    collData.minRuleCount = countValue;
+                    collData.minRulePercent = computedPercent;
                 } else if (coll.logic === 'percent') {
-                    collData.minRulePercent = coll.threshold;
+                    const percentValue = coll.threshold;
+                    const computedCount = totalRules > 0 ? (percentValue / 100) * totalRules : 0;
+                    collData.minRulePercent = percentValue;
+                    collData.minRuleCount = computedCount;
                 }
                 
                 await new Promise((resolve, reject) => {

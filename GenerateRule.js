@@ -123,29 +123,27 @@ function evaluateGroupRule(groupRule, ruleResults) {
   const trueCount = ruleResults.filter(r => r === true).length;
   const totalCount = ruleResults.length;
   const ruleLogicType = groupRule.ruleLogicType || (groupRule.all0Any1True ? "any" : "all");
+  const minCount = Number.isFinite(groupRule.minRuleCount) ? groupRule.minRuleCount : 0;
+  const minPercent = Number.isFinite(groupRule.minRulePercent) ? groupRule.minRulePercent : 0;
+  const actualPercent = totalCount > 0 ? (trueCount / totalCount) * 100 : 0;
   
   switch(ruleLogicType) {
     case "all":
-      // All rules must be true
       return trueCount === totalCount;
-      
     case "any":
-      // At least one rule must be true
-      return trueCount >= 1;
-      
+      return trueCount > 0;
+    case "gt":
+      return trueCount > minCount;
+    case "gte":
     case "count":
-      // At least N rules must be true
-      const minCount = groupRule.minRuleCount || 1;
       return trueCount >= minCount;
-      
+    case "lt":
+      return trueCount < minCount;
+    case "eq":
+      return trueCount === minCount;
     case "percent":
-      // At least X% of rules must be true
-      const minPercent = groupRule.minRulePercent || 50;
-      const actualPercent = (trueCount / totalCount) * 100;
       return actualPercent >= minPercent;
-      
     default:
-      // Default to "all" for backward compatibility
       return trueCount === totalCount;
   }
 }
@@ -1205,11 +1203,23 @@ async function groupruleForFireStoreAndStoreTimeStampsEtc(allArrayTemp, grouprul
     
     // Save new rule logic settings (2026-01-29)
     grouprule.ruleLogicType = document.getElementById("ruleLogicType").value;
-    if (grouprule.ruleLogicType === "count") {
-      grouprule.minRuleCount = parseInt(document.getElementById("minRuleCount").value) || 1;
+    const totalRules = document.querySelectorAll(".rowChoice").length;
+    const minCountValue = parseFloat(document.getElementById("minRuleCount").value);
+    const minPercentValue = parseFloat(document.getElementById("minRulePercent").value);
+    const computedPercent = totalRules > 0 && Number.isFinite(minCountValue)
+      ? (minCountValue / totalRules) * 100
+      : 0;
+    const computedCount = totalRules > 0 && Number.isFinite(minPercentValue)
+      ? (minPercentValue / 100) * totalRules
+      : 0;
+
+    if (["gt", "gte", "lt", "eq", "count"].includes(grouprule.ruleLogicType)) {
+      grouprule.minRuleCount = Number.isFinite(minCountValue) ? minCountValue : 0;
+      grouprule.minRulePercent = Number.isFinite(computedPercent) ? computedPercent : 0;
     }
     if (grouprule.ruleLogicType === "percent") {
-      grouprule.minRulePercent = parseInt(document.getElementById("minRulePercent").value) || 50;
+      grouprule.minRulePercent = Number.isFinite(minPercentValue) ? minPercentValue : 0;
+      grouprule.minRuleCount = Number.isFinite(computedCount) ? computedCount : 0;
     }
     
     // Backward compatibility: set all0Any1True based on new logic type
@@ -2112,34 +2122,114 @@ function findNestedArray(saveObject){
     document.getElementById("saveButton").classList.remove("missing")
   }
 
+  let lastGroupRuleInput = "count";
+  let isGroupRuleSyncing = false;
+
+  function formatGroupRuleNumber(value) {
+    if (!Number.isFinite(value)) {
+      return "0";
+    }
+    const rounded = Math.round(value * 100) / 100;
+    return rounded % 1 === 0 ? String(rounded.toFixed(0)) : String(rounded.toFixed(2));
+  }
+
+  function syncGroupRulePercentFromCount(totalRules) {
+    if (isGroupRuleSyncing) return;
+    if (!totalRules) {
+      document.getElementById("minRulePercent").value = "";
+      return;
+    }
+    const countValue = parseFloat(document.getElementById("minRuleCount").value);
+    if (!Number.isFinite(countValue)) return;
+    isGroupRuleSyncing = true;
+    const computedPercent = (countValue / totalRules) * 100;
+    document.getElementById("minRulePercent").value = formatGroupRuleNumber(computedPercent);
+    isGroupRuleSyncing = false;
+  }
+
+  function syncGroupRuleCountFromPercent(totalRules) {
+    if (isGroupRuleSyncing) return;
+    if (!totalRules) {
+      document.getElementById("minRuleCount").value = "";
+      return;
+    }
+    const percentValue = parseFloat(document.getElementById("minRulePercent").value);
+    if (!Number.isFinite(percentValue)) return;
+    isGroupRuleSyncing = true;
+    const computedCount = (percentValue / 100) * totalRules;
+    document.getElementById("minRuleCount").value = formatGroupRuleNumber(computedCount);
+    isGroupRuleSyncing = false;
+  }
+
   function updateGroupRuleLogicDisplay() {
     console.log("function updateGroupRuleLogicDisplay() 2026-01-29");
     const ruleLogicType = document.getElementById("ruleLogicType").value;
     const ruleCountInput = document.getElementById("ruleCountInput");
     const rulePercentInput = document.getElementById("rulePercentInput");
     const displayText = document.getElementById("ruleLogicDisplayText");
+    const totalRules = document.querySelectorAll(".rowChoice").length;
+    const totalText = totalRules > 0 ? ` (${totalRules} rule${totalRules !== 1 ? "s" : ""})` : "";
+    const countHelp = document.getElementById("ruleCountHelp");
+    const percentHelp = document.getElementById("rulePercentHelp");
     
     // Hide all input fields first
     ruleCountInput.classList.add("hidealways");
     rulePercentInput.classList.add("hidealways");
-    
+
+    if (ruleLogicType === "percent" && lastGroupRuleInput === "count") {
+      lastGroupRuleInput = "percent";
+    }
+
+    if (["gt", "gte", "lt", "eq", "percent"].includes(ruleLogicType)) {
+      ruleCountInput.classList.remove("hidealways");
+      rulePercentInput.classList.remove("hidealways");
+      if (lastGroupRuleInput === "percent") {
+        syncGroupRuleCountFromPercent(totalRules);
+      } else {
+        syncGroupRulePercentFromCount(totalRules);
+      }
+    }
+
+    const countValue = parseFloat(document.getElementById("minRuleCount").value);
+    const percentValue = parseFloat(document.getElementById("minRulePercent").value);
+    const countText = Number.isFinite(countValue) ? formatGroupRuleNumber(countValue) : "0";
+    const percentText = Number.isFinite(percentValue) ? formatGroupRuleNumber(percentValue) : "0";
+
     switch(ruleLogicType) {
       case "all":
-        displayText.innerHTML = "Display only when <b><u>all</u></b> rules below are true.";
+        displayText.innerHTML = `Display only when <b><u>all</u></b> rules below are true${totalText}.`;
         break;
       case "any":
-        displayText.innerHTML = "Display when <b><u>any</u></b> rule below is true.";
+        displayText.innerHTML = `Display when <b><u>any</u></b> rule below is true${totalText}.`;
         break;
-      case "count":
-        ruleCountInput.classList.remove("hidealways");
-        const countValue = document.getElementById("minRuleCount").value || "N";
-        displayText.innerHTML = `Display when at least <b><u>${countValue}</u></b> rule(s) below are true.`;
+      case "gt":
+        displayText.innerHTML = `Display when <b><u>more than</u></b> ${countText} rule(s) below are true${totalText}.`;
+        break;
+      case "gte":
+        displayText.innerHTML = `Display when <b><u>at least</u></b> ${countText} rule(s) below are true${totalText}.`;
+        break;
+      case "lt":
+        displayText.innerHTML = `Display when <b><u>fewer than</u></b> ${countText} rule(s) below are true${totalText}.`;
+        break;
+      case "eq":
+        displayText.innerHTML = `Display when <b><u>exactly</u></b> ${countText} rule(s) below are true${totalText}.`;
         break;
       case "percent":
-        rulePercentInput.classList.remove("hidealways");
-        const percentValue = document.getElementById("minRulePercent").value || "X";
-        displayText.innerHTML = `Display when at least <b><u>${percentValue}%</u></b> of rules below are true.`;
+        displayText.innerHTML = `Display when <b><u>at least ${percentText}%</u></b> of rules below are true${totalText}.`;
         break;
+      case "count":
+        displayText.innerHTML = `Display when <b><u>at least</u></b> ${countText} rule(s) below are true${totalText}.`;
+        break;
+    }
+
+    if (countHelp && percentHelp && ["gt", "gte", "lt", "eq", "percent"].includes(ruleLogicType)) {
+      if (totalRules > 0) {
+        countHelp.textContent = `Equivalent percent: ${percentText}% of ${totalRules} rule${totalRules !== 1 ? "s" : ""}.`;
+        percentHelp.textContent = `Equivalent count: ${countText} of ${totalRules} rule${totalRules !== 1 ? "s" : ""}.`;
+      } else {
+        countHelp.textContent = "Select rules to calculate the equivalent percent.";
+        percentHelp.textContent = "Select rules to calculate the equivalent count.";
+      }
     }
     
     document.getElementById("saveButton").value = " Save Multiple Rules ";
@@ -2148,20 +2238,14 @@ function findNestedArray(saveObject){
 
   function onRuleCountChange() {
     console.log("function onRuleCountChange() 2026-01-29");
-    const countValue = document.getElementById("minRuleCount").value;
-    if (countValue && countValue > 0) {
-      document.getElementById("ruleLogicDisplayText").innerHTML = 
-        `Display when at least <b><u>${countValue}</u></b> rule(s) below are true.`;
-    }
+    lastGroupRuleInput = "count";
+    updateGroupRuleLogicDisplay();
   }
 
   function onRulePercentChange() {
     console.log("function onRulePercentChange() 2026-01-29");
-    const percentValue = document.getElementById("minRulePercent").value;
-    if (percentValue && percentValue > 0 && percentValue <= 100) {
-      document.getElementById("ruleLogicDisplayText").innerHTML = 
-        `Display when at least <b><u>${percentValue}%</u></b> of rules below are true.`;
-    }
+    lastGroupRuleInput = "percent";
+    updateGroupRuleLogicDisplay();
   }
   
   function getTrueDataList (ruleData) {
@@ -3374,24 +3458,28 @@ function findNestedArray(saveObject){
           <div class="col-12">
             <label for="ruleLogicType"><b>Select how rules should be evaluated:</b></label>
             <select id="ruleLogicType" class="form-control" onchange="updateGroupRuleLogicDisplay()" style="max-width: 300px;">
-              <option value="all">All rules must be true (AND)</option>
-              <option value="any">Any rule must be true (OR)</option>
-              <option value="count">At least N rules must be true</option>
-              <option value="percent">At least X% of rules must be true</option>
+              <option value="any">Display Group - ANY true (greater than 0 true)</option>
+              <option value="all">Display Group - ALL true (100% true)</option>
+              <option value="gt">Display Group - Number true &gt; X</option>
+              <option value="gte">Display Group - Number true ≥ X</option>
+              <option value="lt">Display Group - Number true &lt; Y</option>
+              <option value="eq">Display Group - Number true = X</option>
+              <option value="percent">Display Group - Percent true ≥ P%</option>
             </select>
           </div>
         </div>
         <div id="ruleCountInput" class="row mb-2 hidealways">
           <div class="col-12">
-            <label for="minRuleCount">Minimum number of rules that must be true:</label>
-            <input type="number" id="minRuleCount" class="form-control" min="1" value="1" onchange="onRuleCountChange()" style="max-width: 150px;">
+            <label for="minRuleCount">Required number of true rules:</label>
+            <input type="number" id="minRuleCount" class="form-control" min="0" step="0.01" value="1" onchange="onRuleCountChange()" style="max-width: 150px;">
+            <small id="ruleCountHelp" class="form-text text-muted">Equivalent percent will appear after selecting rules.</small>
           </div>
         </div>
         <div id="rulePercentInput" class="row mb-2 hidealways">
           <div class="col-12">
-            <label for="minRulePercent">Minimum percentage of rules that must be true:</label>
-            <input type="number" id="minRulePercent" class="form-control" min="1" max="100" value="50" onchange="onRulePercentChange()" style="max-width: 150px;">
-            <small class="form-text text-muted">Enter a value between 1 and 100</small>
+            <label for="minRulePercent">Required percent of true rules (0-100):</label>
+            <input type="number" id="minRulePercent" class="form-control" min="0" max="100" step="0.01" value="50" onchange="onRulePercentChange()" style="max-width: 150px;">
+            <small id="rulePercentHelp" class="form-text text-muted">Equivalent count will appear after selecting rules.</small>
           </div>
         </div>
         <div class="row mt-3">
@@ -3419,11 +3507,13 @@ function findNestedArray(saveObject){
     
     // Handle new rule logic types (2026-01-29)
     if (questionnaireOutline.ruleLogicType) {
-      document.getElementById("ruleLogicType").value = questionnaireOutline.ruleLogicType;
-      if (questionnaireOutline.ruleLogicType === "count" && questionnaireOutline.minRuleCount) {
+      const savedLogicType = questionnaireOutline.ruleLogicType;
+      const normalizedLogicType = savedLogicType === "count" ? "gte" : savedLogicType;
+      document.getElementById("ruleLogicType").value = normalizedLogicType;
+      if (["gt", "gte", "lt", "eq", "count"].includes(savedLogicType) && questionnaireOutline.minRuleCount) {
         document.getElementById("minRuleCount").value = questionnaireOutline.minRuleCount;
       }
-      if (questionnaireOutline.ruleLogicType === "percent" && questionnaireOutline.minRulePercent) {
+      if (savedLogicType === "percent" && questionnaireOutline.minRulePercent) {
         document.getElementById("minRulePercent").value = questionnaireOutline.minRulePercent;
       }
       updateGroupRuleLogicDisplay();

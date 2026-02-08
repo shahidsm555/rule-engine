@@ -96,8 +96,8 @@
 </head>
 <body>
     <div class="container-main">
-        <h1>✏️ Edit Rule</h1>
-        <p class="subtitle" id="pageSubtitle">Modify an existing Display Rule or Rule Collection</p>
+        <h1>✏️ Edit Display Rule</h1>
+        <p class="subtitle" id="pageSubtitle">Modify an existing Display Rule</p>
         
         <div id="loadingMessage" class="loading">
             Loading rule data...
@@ -106,24 +106,6 @@
         <div id="statusMessage" style="display: none;"></div>
 
         <form id="editRuleForm" style="display: none;">
-            <!-- Rule Type Selection -->
-            <div class="form-section">
-                <h4>Rule Type</h4>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="ruleType" id="typeDisplayRule" value="trueruleStore" onchange="updateFormType()">
-                    <label class="form-check-label" for="typeDisplayRule">
-                        <strong>📄 Display Rule</strong> - A single condition that controls when content is shown
-                    </label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="ruleType" id="typeCollection" value="groupruleStore" onchange="updateFormType()">
-                    <label class="form-check-label" for="typeCollection">
-                        <strong>📁 Rule Collection</strong> - A group of rules with logic (ALL/ANY/COUNT/PERCENT)
-                    </label>
-                </div>
-                <small class="form-text text-muted" style="color: #dc3545; margin-top: 10px;">⚠️ Changing rule type will clear type-specific data</small>
-            </div>
-
             <!-- Basic Information -->
             <div class="form-section" id="basicInfo">
                 <h4>Basic Information</h4>
@@ -235,30 +217,45 @@
             const params = new URLSearchParams(window.location.search);
             return {
                 action: params.get('action'),
-                type: params.get('type'),
-                author: params.get('author'),
                 id: params.get('id')
             };
         }
 
         // Initialize on page load
         window.addEventListener('DOMContentLoaded', async function() {
-            initialSetupIndexedDB();
+            console.log('Page loaded, initializing...');
+            
+            // Wait for IndexedDB to be initialized
+            await new Promise(resolve => {
+                if (typeof initialSetupIndexedDB === 'function') {
+                    initialSetupIndexedDB();
+                    setTimeout(resolve, 500); // Give it time to initialize
+                } else {
+                    console.warn('initialSetupIndexedDB not found');
+                    resolve();
+                }
+            });
             
             const params = getUrlParams();
+            console.log('URL params:', params);
             
-            if (!params.action || params.action !== 'edit' || !params.type || !params.author || !params.id) {
+            if (!params.action || !params.id) {
                 showStatus('Invalid URL parameters. Please use a valid edit link.', 'error');
                 document.getElementById('loadingMessage').style.display = 'none';
                 return;
             }
 
-            ruleType = params.type;
-            ruleAuthor = decodeURIComponent(params.author);
             ruleId = decodeURIComponent(params.id);
+            console.log('Attempting to load rule:', ruleId);
 
-            await loadAuthors();
-            await loadRuleData();
+            try {
+                await loadAuthors();
+                await loadRuleData();
+            } catch (error) {
+                console.error('Fatal error during page load:', error);
+                showStatus('Error: ' + error.message, 'error');
+                document.getElementById('loadingMessage').style.display = 'none';
+            }
         });
 
         // Load authors and display rules from database
@@ -377,35 +374,53 @@
 
         async function loadRuleData() {
             try {
-                const db = await openDB();
+                console.log('Loading rule with ID:', ruleId);
                 
+                const db = await openDB();
                 const tx = db.transaction('ruleStore', 'readonly');
                 const store = tx.objectStore('ruleStore');
-                const getAllRequest = store.getAll();
                 
+                // Get all rules and search by ruleID field only
+                const getAllRequest = store.getAll();
                 const allRules = await new Promise((resolve, reject) => {
                     getAllRequest.onsuccess = () => resolve(getAllRequest.result || []);
                     getAllRequest.onerror = () => reject(getAllRequest.error);
                 });
                 
-                // Find the matching rule
+                console.log('Total rules in database:', allRules.length);
+                
+                // Find rule by ruleID field only (unique identifier)
                 const matchingRule = allRules.find(rule => {
-                    return rule.keyPathValue[0] === ruleType &&
-                           rule.keyPathValue[2] === ruleAuthor &&
-                           rule.keyPathValue[4] === ruleId;
+                    return rule.keyPathValue && 
+                           rule.keyPathValue[0] === 'trueruleStore' &&
+                           rule.ruleID === ruleId;
                 });
                 
-                if (!matchingRule) {
+                if (matchingRule) {
+                    console.log('✓ Found rule:', matchingRule);
+                    currentRule = matchingRule;
+                    ruleAuthor = matchingRule.ruleAuthor;
+                    ruleType = 'trueruleStore';
+                    populateForm();
                     document.getElementById('loadingMessage').style.display = 'none';
-                    showStatus(`Rule not found: ${ruleType} / ${ruleAuthor} / ${ruleId}`, 'error');
+                    document.getElementById('editRuleForm').style.display = 'block';
+                    db.close();
                     return;
                 }
-
-                currentRule = matchingRule;
-                populateForm();
                 
+                // Debug output if not found
+                console.error('Rule not found!');
+                console.log('Searching for: ruleID =', ruleId);
+                console.log('Available display rules:', allRules.filter(r => r.keyPathValue && r.keyPathValue[0] === 'trueruleStore').map(r => ({
+                    ruleID: r.ruleID,
+                    ruleAuthor: r.ruleAuthor
+                })));
+                
+                db.close();
                 document.getElementById('loadingMessage').style.display = 'none';
-                document.getElementById('editRuleForm').style.display = 'block';
+                showStatus(`Rule not found: ID="${ruleId}"<br><br>Check console for available rules.`, 'error');
+                return;
+                
             } catch (error) {
                 console.error('Error loading rule:', error);
                 showStatus('Error loading rule: ' + error.message, 'error');
@@ -433,61 +448,32 @@
         }
 
         function populateForm() {
-            // Set rule type radio buttons
-            if (ruleType === 'trueruleStore') {
-                document.getElementById('typeDisplayRule').checked = true;
-            } else {
-                document.getElementById('typeCollection').checked = true;
-            }
-            
             // Set basic fields
-            document.getElementById('ruleAuthor').value = currentRule.ruleAuthor || currentRule.groupruleAuthor || '';
-            document.getElementById('ruleID').value = currentRule.ruleID || currentRule.groupruleID || '';
+            document.getElementById('ruleAuthor').value = currentRule.ruleAuthor || '';
+            document.getElementById('ruleID').value = currentRule.ruleID || '';
             
-            // Show appropriate sections based on rule type
-            if (ruleType === 'trueruleStore') {
-                // Display Rule
-                document.getElementById('displayRuleFields').classList.remove('hidealways');
-                document.getElementById('collectionLogic').classList.add('hidealways');
-                
-                const ruleContent = currentRule.ruleContent || currentRule.ruleContentInnerText || '';
-                document.getElementById('ruleDescription').value = ruleContent;
-                document.getElementById('ruleLogic').value = currentRule.ruleLogic || '';
-                
-            } else {
-                // Collection
-                document.getElementById('displayRuleFields').classList.add('hidealways');
-                document.getElementById('collectionLogic').classList.remove('hidealways');
-                
-                const groupruleContent = currentRule.groupruleContent || currentRule.groupruleContentInnerText || '';
-                document.getElementById('ruleDescription').value = groupruleContent;
-                
-                // Set logic type
-                const logicType = currentRule.ruleLogicType || 'all';
-                document.getElementById('ruleLogicType').value = logicType;
-                
-                // Set thresholds
-                if (logicType === 'count') {
-                    document.getElementById('minRuleCount').value = currentRule.minRuleCount || 2;
-                } else if (logicType === 'percent') {
-                    document.getElementById('minRulePercent').value = currentRule.minRulePercent || 50;
-                }
-                
-                // Load child rules
-                const allArrayID = currentRule.allArrayID || [];
-                const allArrayAuthor = currentRule.allArrayAuthor || [];
-                
-                childRules = [];
-                for (let i = 0; i < allArrayID.length; i++) {
-                    childRules.push({
-                        author: allArrayAuthor[i] || '',
-                        id: allArrayID[i] || ''
-                    });
-                }
-                
-                updateLogicDisplay();
-                updateChildRulesList();
+            // Display Rule fields
+            const ruleContent = currentRule.ruleContent || currentRule.ruleContentInnerText || '';
+            document.getElementById('ruleDescription').value = ruleContent;
+            document.getElementById('ruleLogic').value = currentRule.ruleLogic || '';
+            
+            // Show display rule fields, hide collection fields
+            document.getElementById('displayRuleFields').classList.remove('hidealways');
+            document.getElementById('collectionLogic').classList.add('hidealways');
+            
+            // Load child rules if any
+            const allArrayID = currentRule.allArrayID || [];
+            const allArrayAuthor = currentRule.allArrayAuthor || [];
+            
+            childRules = [];
+            for (let i = 0; i < allArrayID.length; i++) {
+                childRules.push({
+                    author: allArrayAuthor[i] || '',
+                    id: allArrayID[i] || ''
+                });
             }
+            
+            updateChildRulesList();
         }
 
         function updateLogicDisplay() {
@@ -558,31 +544,21 @@
                 return;
             }
             
-            let htmGet selected rule type (may have changed)
-                const selectedType = document.querySelector('input[name="ruleType"]:checked').value;
-                const isTypeChanged = (selectedType !== ruleType);
-                
-                // Warn if type is being changed
-                if (isTypeChanged) {
-                    if (!confirm('⚠️ WARNING: You are changing the rule type!\n\nChanging from ' + 
-                        (ruleType === 'trueruleStore' ? 'Display Rule' : 'Collection') + 
-                        ' to ' + 
-                        (selectedType === 'trueruleStore' ? 'Display Rule' : 'Collection') + 
-                        ' will restructure the data.\n\nAre you sure you want to continue?')) {
-                        return;
-                    }
-                }
-                
-                // Update keyPathValue with new author and type
-                currentRule.keyPathValue[0] = selectedType;
-                currentRule.keyPathValue[2] = newAuthor;
-                
-                // Update timestamp
-                currentRule.versionDateSince1969 = Date.now();
-                currentRule.localTimeString = new Date().toString();
-
-                // Update specific fields based on SELECTED rule type
-                if (selected
+            let html = '<div style="display: grid; gap: 0.75rem;">';
+            childRules.forEach((rule, index) => {
+                html += `
+                    <div style="padding: 1rem; border: 1px solid #ddd; border-radius: 4px; background: #f8f9fa;">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div style="flex: 1;">
+                                <strong>${rule.id || rule.ruleID}</strong> (${rule.author || rule.ruleAuthor})
+                                <div style="color: #666; font-size: 0.9rem; margin-top: 0.25rem;">${rule.content || rule.ruleContent || 'No description'}</div>
+                            </div>
+                            <button onclick="removeChildRule(${index})" class="btn btn-danger btn-sm">Remove</button>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
             
             listDiv.innerHTML = html;
         }
@@ -596,95 +572,38 @@
                     return;
                 }
                 
+                const ruleId = document.getElementById('ruleId').value;
+                const ruleContent = document.getElementById('ruleContent').value;
+                
+                if (!ruleId) {
+                    showStatus('Please enter a Rule ID', 'error');
+                    return;
+                }
+                
+                if (!ruleContent) {
+                    showStatus('Please enter rule content', 'error');
+                    return;
+                }
+                
                 // Update keyPathValue with new author
-                currentRule.keyPathValue[2] = newAuthor;
+                currentRule.keyPathValue[1] = newAuthor;
+                currentRule.keyPathValue[2] = ruleId;
                 
                 // Update timestamp
                 currentRule.versionDateSince1969 = Date.now();
                 currentRule.localTimeString = new Date().toString();
-currentRule.ruleID = ruleId;
-                    
-                    // Clean up collection-specific fields if changed from collection
-                    if (isTypeChanged) {
-                        delete currentRule.groupruleContent;
-                        delete currentRule.groupruleContentInnerText;
-                        delete currentRule.groupruleAuthor;
-                        delete currentRule.groupruleID;
-                        delete currentRule.ruleLogicType;
-                        delete currentRule.all0Any1True;
-                        delete currentRule.allArrayID;
-                        delete currentRule.allArrayAuthor;
-                        delete currentRule.allArrayType;
-                        delete currentRule.allRowChoices;
-                        delete currentRule.minRuleCount;
-                        delete currentRule.minRulePercent;
-                    }
-                    
-                // Update specific fields based on rule type
-                if (ruleType ===groupruleID = ruleId;
-                    currentRule.ruleLogicType = logicType;
-                    currentRule.all0Any1True = (logicType === 'any');
-                    
-                    // Build arrays for child rules
-                    currentRule.allArrayID = childRules.map(r => r.id);
-                    currentRule.allArrayAuthor = childRules.map(r => r.author);
-                    currentRule.allArrayType = childRules.map(() => 'trueruleStore');
-                    currentRule.allRowChoices = [];
-                    
-                    // Set thresholds
-                    if (logicType === 'count') {
-                        currentRule.minRuleCount = parseInt(document.getElementById('minRuleCount').value);
-                        delete currentRule.minRulePercent;
-                    } else if (logicType === 'percent') {
-                        currentRule.minRulePercent = parseInt(document.getElementById('minRulePercent').value);
-                        delete currentRule.minRuleCount;
-                    } else {
-                        delete currentRule.minRuleCount;
-                        delete currentRule.minRulePercent;
-                    }
-                    
-                    // Clean up display rule-specific fields if changed from display rule
-                    if (isTypeChanged) {
-                        delete currentRule.ruleContent;
-                        delete currentRule.ruleContentInnerText;
-                        delete currentRule.ruleLogic;
-                        delete currentRule.ruleAuthor;
-                        delete currentRule.ruleIDById('ruleLogicType').value;
-                    
-                    if (!groupruleContent) {
-                        showStatus('Please enter a collection description', 'error');
-                        return;
-                    }
-                    
-                    if (childRules.length === 0) {
-                        showStatus('Please add at least one child rule', 'error');
-                        return;
-                    }
-                    
-                    currentRule.groupruleContent = groupruleContent;
-                    currentRule.groupruleContentInnerText = groupruleContent;
-                    currentRule.groupruleAuthor = newAuthor;
-                    currentRule.ruleLogicType = logicType;
-                    currentRule.all0Any1True = (logicType === 'any');
-                    
-                    // Build arrays for child rules
-                    currentRule.allArrayID = childRules.map(r => r.id);
-                    currentRule.allArrayAuthor = childRules.map(r => r.author);
-                    currentRule.allArrayType = childRules.map(() => 'trueruleStore');
-                    currentRule.allRowChoices = [];
-                    
-                    // Set thresholds
-                    if (logicType === 'count') {
-                        currentRule.minRuleCount = parseInt(document.getElementById('minRuleCount').value);
-                        delete currentRule.minRulePercent;
-                    } else if (logicType === 'percent') {
-                        currentRule.minRulePercent = parseInt(document.getElementById('minRulePercent').value);
-                        delete currentRule.minRuleCount;
-                    } else {
-                        delete currentRule.minRuleCount;
-                        delete currentRule.minRulePercent;
-                    }
-                }
+                
+                // Update display rule fields
+                currentRule.ruleID = ruleId;
+                currentRule.ruleAuthor = newAuthor;
+                currentRule.ruleContent = ruleContent;
+                currentRule.ruleContentInnerText = ruleContent;
+                currentRule.ruleLogic = document.getElementById('ruleLogic').value || '';
+                
+                // Update child rules if any
+                currentRule.allArrayID = childRules.map(r => r.id || r.ruleID);
+                currentRule.allArrayAuthor = childRules.map(r => r.author || r.ruleAuthor);
+                currentRule.allArrayType = childRules.map(() => 'trueruleStore');
 
                 // Save to database
                 const db = await openDB();
@@ -737,15 +656,11 @@ currentRule.ruleID = ruleId;
         }
 
         function closeForm() {
-            if (confirm('Close this form? Any unsaved changes will be lost.')) {
-                window.location.href = 'ManageRules.html';
-            }
+            window.location.href = 'ManageRules.html';
         }
 
         function goBack() {
-            if (confirm('Cancel editing? Any unsaved changes will be lost.')) {
-                window.location.href = 'ManageRules.html';
-            }
+            window.location.href = 'ManageRules.html';
         }
 
         function showStatus(message, type = 'info') {

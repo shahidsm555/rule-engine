@@ -206,21 +206,26 @@
                 <div class="form-group">
                     <label for="logicType">How should the rules be evaluated?</label>
                     <select id="logicType" onchange="updateLogicDisplay()">
-                        <option value="all">ALL - All rules must be true (AND)</option>
-                        <option value="any">ANY - At least one rule must be true (OR)</option>
-                        <option value="count">COUNT - At least N rules must be true</option>
-                        <option value="percent">PERCENT - At least X% of rules must be true</option>
+                        <option value="any">Display Group - ANY true (greater than 0 true)</option>
+                        <option value="all">Display Group - ALL true (100% true)</option>
+                        <option value="gt">Display Group - Number true &gt; X</option>
+                        <option value="gte">Display Group - Number true ≥ X</option>
+                        <option value="lt">Display Group - Number true &lt; Y</option>
+                        <option value="eq">Display Group - Number true = X</option>
+                        <option value="percent">Display Group - Percent true ≥ P%</option>
                     </select>
                 </div>
 
                 <div id="countInput" class="form-group hidealways">
-                    <label for="minCount">Minimum number of rules that must be true:</label>
-                    <input type="number" id="minCount" min="1" value="2">
+                    <label for="minCount">Required number of true rules:</label>
+                    <input type="number" id="minCount" min="0" step="0.01" value="2">
+                    <small id="minCountHelp" style="color: #666;">Equivalent percentage will appear here once rules are selected.</small>
                 </div>
 
                 <div id="percentInput" class="form-group hidealways">
-                    <label for="minPercent">Minimum percentage of rules (1-100):</label>
-                    <input type="number" id="minPercent" min="1" max="100" value="50">
+                    <label for="minPercent">Required percent of true rules (0-100):</label>
+                    <input type="number" id="minPercent" min="0" max="100" step="0.01" value="50">
+                    <small id="minPercentHelp" style="color: #666;">Equivalent count will appear here once rules are selected.</small>
                 </div>
 
                 <div class="logic-display">
@@ -526,41 +531,125 @@
             console.log('  → Test data creation complete:', testDisplayRules.length, 'rules');
         }
 
-        // Update logic display
+        let lastEditedInput = 'count';
+        let isSyncingInputs = false;
+
+        function getSelectedRuleTotal() {
+            return document.querySelectorAll('#rulesList input[type="checkbox"]:checked').length;
+        }
+
+        function formatNumber(value) {
+            if (!Number.isFinite(value)) {
+                return '0';
+            }
+            const rounded = Math.round(value * 100) / 100;
+            return rounded % 1 === 0 ? String(rounded.toFixed(0)) : String(rounded.toFixed(2));
+        }
+
+        function syncPercentFromCount(totalSelected) {
+            if (isSyncingInputs) return;
+            if (!totalSelected) {
+                document.getElementById('minPercent').value = '';
+                return;
+            }
+            const countValue = parseFloat(document.getElementById('minCount').value);
+            if (!Number.isFinite(countValue)) return;
+            isSyncingInputs = true;
+            const computedPercent = (countValue / totalSelected) * 100;
+            document.getElementById('minPercent').value = formatNumber(computedPercent);
+            isSyncingInputs = false;
+        }
+
+        function syncCountFromPercent(totalSelected) {
+            if (isSyncingInputs) return;
+            if (!totalSelected) {
+                document.getElementById('minCount').value = '';
+                return;
+            }
+            const percentValue = parseFloat(document.getElementById('minPercent').value);
+            if (!Number.isFinite(percentValue)) return;
+            isSyncingInputs = true;
+            const computedCount = (percentValue / 100) * totalSelected;
+            document.getElementById('minCount').value = formatNumber(computedCount);
+            isSyncingInputs = false;
+        }
+
         function updateLogicDisplay() {
             const logicType = document.getElementById('logicType').value;
             const countInput = document.getElementById('countInput');
             const percentInput = document.getElementById('percentInput');
             const logicSummary = document.getElementById('logicSummary');
+            const totalSelected = getSelectedRuleTotal();
+            const totalText = totalSelected > 0 ? ` (${totalSelected} rule${totalSelected !== 1 ? 's' : ''})` : '';
 
-            // Hide all conditional inputs
             countInput.classList.add('hidealways');
             percentInput.classList.add('hidealways');
 
-            // Show appropriate input and update summary
-            switch(logicType) {
-                case 'all':
-                    logicSummary.innerHTML = 'Display only when <strong>all</strong> rules below are true.';
-                    break;
+            if (logicType === 'percent' && lastEditedInput === 'count') {
+                lastEditedInput = 'percent';
+            }
+
+            if (['gt', 'gte', 'lt', 'eq', 'percent'].includes(logicType)) {
+                countInput.classList.remove('hidealways');
+                percentInput.classList.remove('hidealways');
+                if (lastEditedInput === 'percent') {
+                    syncCountFromPercent(totalSelected);
+                } else {
+                    syncPercentFromCount(totalSelected);
+                }
+            }
+
+            const countValue = parseFloat(document.getElementById('minCount').value);
+            const percentValue = parseFloat(document.getElementById('minPercent').value);
+            const countText = Number.isFinite(countValue) ? formatNumber(countValue) : '0';
+            const percentText = Number.isFinite(percentValue) ? formatNumber(percentValue) : '0';
+
+            switch (logicType) {
                 case 'any':
-                    logicSummary.innerHTML = 'Display when <strong>any one or more</strong> rules below are true.';
+                    logicSummary.innerHTML = `Display when <strong>any</strong> rule is true${totalText}.`;
                     break;
-                case 'count':
-                    countInput.classList.remove('hidealways');
-                    const count = document.getElementById('minCount').value;
-                    logicSummary.innerHTML = `Display when at least <strong>${count}</strong> of the rules below are true.`;
+                case 'all':
+                    logicSummary.innerHTML = `Display only when <strong>all</strong> rules are true${totalText}.`;
+                    break;
+                case 'gt':
+                    logicSummary.innerHTML = `Display when <strong>more than</strong> ${countText} rules are true${totalText}.`;
+                    break;
+                case 'gte':
+                    logicSummary.innerHTML = `Display when <strong>at least</strong> ${countText} rules are true${totalText}.`;
+                    break;
+                case 'lt':
+                    logicSummary.innerHTML = `Display when <strong>fewer than</strong> ${countText} rules are true${totalText}.`;
+                    break;
+                case 'eq':
+                    logicSummary.innerHTML = `Display when <strong>exactly</strong> ${countText} rules are true${totalText}.`;
                     break;
                 case 'percent':
-                    percentInput.classList.remove('hidealways');
-                    const percent = document.getElementById('minPercent').value;
-                    logicSummary.innerHTML = `Display when at least <strong>${percent}%</strong> of the rules below are true.`;
+                    logicSummary.innerHTML = `Display when <strong>at least ${percentText}%</strong> of rules are true${totalText}.`;
                     break;
+                default:
+                    logicSummary.innerHTML = `Display only when <strong>all</strong> rules are true${totalText}.`;
+                    break;
+            }
+
+            const minCountHelp = document.getElementById('minCountHelp');
+            const minPercentHelp = document.getElementById('minPercentHelp');
+            if (totalSelected > 0 && ['gt', 'gte', 'lt', 'eq', 'percent'].includes(logicType)) {
+                minCountHelp.textContent = `Equivalent percent: ${percentText}% of ${totalSelected} rule${totalSelected !== 1 ? 's' : ''}.`;
+                minPercentHelp.textContent = `Equivalent count: ${countText} of ${totalSelected} rule${totalSelected !== 1 ? 's' : ''}.`;
+            } else if (['gt', 'gte', 'lt', 'eq', 'percent'].includes(logicType)) {
+                minCountHelp.textContent = 'Select rules to calculate the equivalent percent.';
+                minPercentHelp.textContent = 'Select rules to calculate the equivalent count.';
             }
         }
 
-        // Update summary when count/percent changes
-        document.getElementById('minCount')?.addEventListener('input', updateLogicDisplay);
-        document.getElementById('minPercent')?.addEventListener('input', updateLogicDisplay);
+        document.getElementById('minCount')?.addEventListener('input', () => {
+            lastEditedInput = 'count';
+            updateLogicDisplay();
+        });
+        document.getElementById('minPercent')?.addEventListener('input', () => {
+            lastEditedInput = 'percent';
+            updateLogicDisplay();
+        });
 
         // Load available display rules
         async function loadAvailableRules() {
@@ -670,6 +759,8 @@
             } else {
                 countDisplay.innerHTML = `<span style="color: #28a745;">✓ ${count} of ${total} rules selected</span>`;
             }
+
+            updateLogicDisplay();
         }
 
         // Auto-fill form with test data for quick testing
@@ -837,12 +928,26 @@
                 };
 
                 // Add count/percent values if applicable
-                if (logicType === 'count') {
-                    collection.minRuleCount = parseInt(document.getElementById('minCount').value);
+                const totalSelectedRules = selectedRuleIDs.length;
+                const minCountValue = parseFloat(document.getElementById('minCount').value);
+                const minPercentValue = parseFloat(document.getElementById('minPercent').value);
+                const computedPercent = totalSelectedRules > 0 && Number.isFinite(minCountValue)
+                    ? (minCountValue / totalSelectedRules) * 100
+                    : 0;
+                const computedCount = totalSelectedRules > 0 && Number.isFinite(minPercentValue)
+                    ? (minPercentValue / 100) * totalSelectedRules
+                    : 0;
+
+                if (['gt', 'gte', 'lt', 'eq', 'count'].includes(logicType)) {
+                    collection.minRuleCount = Number.isFinite(minCountValue) ? minCountValue : 0;
+                    collection.minRulePercent = Number.isFinite(computedPercent) ? computedPercent : 0;
                     console.log('Added minRuleCount:', collection.minRuleCount);
-                } else if (logicType === 'percent') {
-                    collection.minRulePercent = parseInt(document.getElementById('minPercent').value);
                     console.log('Added minRulePercent:', collection.minRulePercent);
+                } else if (logicType === 'percent') {
+                    collection.minRulePercent = Number.isFinite(minPercentValue) ? minPercentValue : 0;
+                    collection.minRuleCount = Number.isFinite(computedCount) ? computedCount : 0;
+                    console.log('Added minRulePercent:', collection.minRulePercent);
+                    console.log('Added minRuleCount:', collection.minRuleCount);
                 }
 
                 console.log('Collection object created:', collection);
