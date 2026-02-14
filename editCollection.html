@@ -8,6 +8,7 @@
     <!-- Modern CSS -->
     <link rel="stylesheet" href="design_system.css">
     <link rel="stylesheet" href="modern_styles.css">
+    <link rel="stylesheet" href="help_system.css">
     
     <!-- jQuery -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
@@ -21,6 +22,7 @@
     
     <!-- Group Rule Logic -->
     <script src="GenerateRule.js"></script>
+    <script src="help_system.js"></script>
 
     <style>
         .create-container {
@@ -514,15 +516,17 @@
                 
                 const tx = db.transaction('ruleStore', 'readonly');
                 const store = tx.objectStore('ruleStore');
-                const keyPath = ["groupruleStore", author, id];
+                
+                // Try new format first: ["groupruleStore", version, author, version, id]
+                let keyPath = ["groupruleStore", 1, author, 1, id];
                 currentCollectionKeyPath = keyPath;
                 
-                console.log('Looking for collection with keyPath:', keyPath);
+                console.log('Looking for collection with keyPath (new format):', keyPath);
                 
-                const collection = await new Promise((resolve, reject) => {
+                let collection = await new Promise((resolve, reject) => {
                     const request = store.get(keyPath);
                     request.onsuccess = () => {
-                        console.log('Get request succeeded, result:', request.result);
+                        console.log('Get request (new format) result:', request.result);
                         resolve(request.result);
                     };
                     request.onerror = () => {
@@ -531,9 +535,29 @@
                     };
                 });
                 
+                // If not found with new format, try old format: ["groupruleStore", author, id]
+                if (!collection) {
+                    console.log('Collection not found with new format, trying old format...');
+                    keyPath = ["groupruleStore", author, id];
+                    currentCollectionKeyPath = keyPath;
+                    console.log('Looking for collection with keyPath (old format):', keyPath);
+                    
+                    collection = await new Promise((resolve, reject) => {
+                        const request = store.get(keyPath);
+                        request.onsuccess = () => {
+                            console.log('Get request (old format) result:', request.result);
+                            resolve(request.result);
+                        };
+                        request.onerror = () => {
+                            console.error('Get request failed:', request.error);
+                            reject(request.error);
+                        };
+                    });
+                }
+                
                 if (!collection) {
                     console.error('Collection not found in database!');
-                    console.log('Tried keyPath:', keyPath);
+                    console.log('Tried keyPaths:', [["groupruleStore", 1, author, 1, id], ["groupruleStore", author, id]]);
                     
                     // Try to list all collections to help debug
                     const allRules = await new Promise((resolve, reject) => {
@@ -542,7 +566,11 @@
                         request.onerror = () => reject(request.error);
                     });
                     const collections = allRules.filter(r => r.keyPathValue && r.keyPathValue[0] === 'groupruleStore');
-                    console.log('Available collections:', collections.map(c => ({ id: c.groupruleID, author: c.groupruleAuthor })));
+                    console.log('Available collections:', collections.map(c => ({ 
+                        id: c.groupruleID, 
+                        author: c.groupruleAuthor,
+                        keyPath: c.keyPathValue 
+                    })));
                     db.close();
                     
                     showAlert('❌ Collection not found! It may have been deleted. Redirecting...', 'danger');

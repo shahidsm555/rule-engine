@@ -8,6 +8,8 @@
     <!-- CSS -->
     <link rel="stylesheet" href="design_system.css">
     <link rel="stylesheet" href="modern_styles.css">
+    <link rel="stylesheet" href="help_system.css">
+    <link rel="stylesheet" href="help_system.css">
     
     <!-- jQuery -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
@@ -19,6 +21,8 @@
     <!-- IndexedDB Setup -->
     <script src="setupIndexedDB.js"></script>
     <script src="GenerateRule.js"></script>
+    <script src="help_system.js"></script>
+    <script src="help_system.js"></script>
     
     <style>
         .page-header {
@@ -168,7 +172,10 @@
         </a>
 
         <div class="page-header">
-            <h1 style="margin: 0 0 0.5rem 0;">📦 Manage Rule Collections</h1>
+            <h1 style="margin: 0 0 0.5rem 0;">
+                📦 Manage Rule Collections
+                <span class="help-icon" onclick="helpSystem.showModal('collections', '📦 About Collections', `<div class='help-section'><h3>What are Collections?</h3><p>Collections group multiple display rules together and evaluate them using flexible logic (ALL, ANY, count, percent).</p></div><div class='info-box info-box-tip'><div class='info-box-icon'>💡</div><div class='info-box-content'><strong>Use cases:</strong> User eligibility checks, feature flags, conditional content display, complex business rules.</div></div>`);" title="Click for help">?</span>
+            </h1>
             <p style="margin: 0; opacity: 0.9;">View and manage your rule collections with flexible evaluation logic</p>
             <div id="debugInfo" style="margin-top: 1rem; padding: 0.75rem; background: #f8f9fa; border-radius: 4px; font-size: 0.85rem; font-family: monospace; color: #666;">
                 Loading database...
@@ -204,11 +211,11 @@
                 <div class="col-12">
                     <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
                         <div style="flex: 1; min-width: 250px;">
-                            <input type="text" id="searchInput" class="form-control" placeholder="🔍 Search by Author, ID, or Title..." oninput="filterCollections()">
+                            <input type="text" id="searchInput" class="form-control" placeholder="🔍 Search by Author, ID, or Title..." oninput="filterCollections()" data-help="Search across all collection fields - author names, IDs, and titles" title="Search across all collection fields">
                             
                         </div>
                         <div>
-                            <select id="logicFilter" class="form-control" onchange="filterCollections()" style="min-width: 200px;">
+                            <select id="logicFilter" class="form-control" onchange="filterCollections()" style="min-width: 200px;" data-help="Filter collections by their evaluation logic type" title="Filter by logic type">
                                 <option value="__all__">All Logic Types</option>
                                 <option value="all">ALL (AND)</option>
                                 <option value="any">ANY (OR)</option>
@@ -446,6 +453,10 @@
             try {
                 const card = document.createElement('div');
                 card.className = 'collection-card';
+                
+                // Add data attributes for context menu
+                card.dataset.author = collection.groupruleAuthor;
+                card.dataset.id = collection.groupruleID;
                 
                 const logicType = collection.ruleLogicType || 'all';
                 const logicClass = `logic-${logicType}`;
@@ -875,23 +886,96 @@
 
         function editCollection(keyPathValue) {
             console.log("Edit collection:", keyPathValue);
-            const author = keyPathValue[1];
-            const id = keyPathValue[2];
+            console.log("KeyPath length:", keyPathValue.length);
+            console.log("KeyPath values:", keyPathValue);
+            
+            // Handle different keyPath formats
+            let author, id;
+            if (keyPathValue.length === 5) {
+                // New format: ["groupruleStore", version, author, version, id]
+                author = keyPathValue[2];
+                id = keyPathValue[4];
+            } else if (keyPathValue.length === 3) {
+                // Old format: ["groupruleStore", author, id]
+                author = keyPathValue[1];
+                id = keyPathValue[2];
+            } else {
+                console.error("Unexpected keyPath format:", keyPathValue);
+                alert("Error: Invalid collection data format. Please check the console.");
+                return;
+            }
+            
+            console.log("Extracted author:", author, "id:", id);
+            
+            if (!author || !id) {
+                console.error("Missing author or id!");
+                alert("Error: Missing author or ID in collection data.");
+                return;
+            }
+            
             // Redirect to dedicated editCollection.html page
             window.location.href = `editCollection.html?author=${encodeURIComponent(author)}&id=${encodeURIComponent(id)}`;
         }
 
         function viewCollection(keyPathValue) {
             console.log("View collection:", keyPathValue);
-            const author = keyPathValue[1];
-            const id = keyPathValue[2];
+            console.log("KeyPath length:", keyPathValue.length);
+            
+            // Handle different keyPath formats
+            let author, id;
+            if (keyPathValue.length === 5) {
+                // New format: ["groupruleStore", version, author, version, id]
+                author = keyPathValue[2];
+                id = keyPathValue[4];
+            } else if (keyPathValue.length === 3) {
+                // Old format: ["groupruleStore", author, id]
+                author = keyPathValue[1];
+                id = keyPathValue[2];
+            } else {
+                console.error("Unexpected keyPath format:", keyPathValue);
+                alert("Error: Invalid collection data format.");
+                return;
+            }
+            
+            console.log("Extracted author:", author, "id:", id);
+            
+            if (!author || !id) {
+                console.error("Missing author or id!");
+                alert("Error: Missing author or ID in collection data.");
+                return;
+            }
+            
             // Redirect to editCollection.html with view mode
             window.location.href = `editCollection.html?action=view&author=${encodeURIComponent(author)}&id=${encodeURIComponent(id)}`;
         }
 
         function deleteCollection(keyPathValue) {
-            const author = keyPathValue[1];
-            const id = keyPathValue[2];
+            console.log("Delete collection:", keyPathValue);
+            console.log("KeyPath length:", keyPathValue.length);
+            
+            // Handle different keyPath formats
+            let author, id;
+            if (keyPathValue.length === 5) {
+                // New format: ["groupruleStore", version, author, version, id]
+                author = keyPathValue[2];
+                id = keyPathValue[4];
+            } else if (keyPathValue.length === 3) {
+                // Old format: ["groupruleStore", author, id]
+                author = keyPathValue[1];
+                id = keyPathValue[2];
+            } else {
+                console.error("Unexpected keyPath format:", keyPathValue);
+                alert("Error: Invalid collection data format.");
+                return;
+            }
+            
+            console.log("Extracted author:", author, "id:", id);
+            
+            if (!author || !id) {
+                console.error("Missing author or id!");
+                alert("Error: Missing author or ID in collection data.");
+                return;
+            }
             
             if (!confirm(`Are you sure you want to delete the collection "${id}" by ${author}?\n\nThis action cannot be undone.`)) {
                 return;
@@ -933,6 +1017,54 @@
                 alert("Error connecting to database");
             };
         }
+        
+        // Context Menu for Collections - 2026-02-11
+        let currentContextCollection = null;
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            // Add context menu to collection cards
+            document.addEventListener('contextmenu', (e) => {
+                const collectionCard = e.target.closest('.collection-card');
+                if (collectionCard) {
+                    e.preventDefault();
+                    const author = collectionCard.dataset.author;
+                    const id = collectionCard.dataset.id;
+                    // Construct the full keyPathValue
+                    const keyPathValue = ["groupruleStore", 1, author, 1, id];
+                    currentContextCollection = { author, id, keyPathValue };
+                    
+                    helpSystem.showContextMenu(e.pageX, e.pageY, [
+                        {
+                            icon: '📋',
+                            label: 'Copy Collection ID',
+                            action: `copyToClipboard('${id}'); helpSystem.hideContextMenu();`
+                        },
+                        {
+                            icon: '👤',
+                            label: 'Copy Author',
+                            action: `copyToClipboard('${author}'); helpSystem.hideContextMenu();`
+                        },
+                        { divider: true },
+                        {
+                            icon: '✏️',
+                            label: 'Edit Collection',
+                            action: `window.location.href='editCollection.html?author=${encodeURIComponent(author)}&id=${encodeURIComponent(id)}'; helpSystem.hideContextMenu();`
+                        },
+                        {
+                            icon: '📊',
+                            label: 'View Details',
+                            action: `alert('Details for ${author}/${id}'); helpSystem.hideContextMenu();`
+                        },
+                        { divider: true },
+                        {
+                            icon: '🗑️',
+                            label: 'Delete Collection',
+                            action: `if(confirm('Delete this collection?')) { deleteCollection(currentContextCollection.keyPathValue); } helpSystem.hideContextMenu();`
+                        }
+                    ]);
+                }
+            });
+        });
     </script>
 </body>
 </html>

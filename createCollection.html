@@ -8,6 +8,7 @@
     <!-- Modern CSS -->
     <link rel="stylesheet" href="design_system.css">
     <link rel="stylesheet" href="modern_styles.css">
+    <link rel="stylesheet" href="help_system.css">
     
     <!-- jQuery -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
@@ -21,6 +22,7 @@
     
     <!-- Group Rule Logic -->
     <script src="GenerateRule.js"></script>
+    <script src="help_system.js"></script>
 
     <style>
         .create-container {
@@ -162,50 +164,78 @@
 </head>
 <body>
     <div class="create-container">
-        <h1>Create New Rule Collection</h1>
+        <h1>
+            Create New Rule Collection
+            <span class="help-icon" onclick="helpSystem.showModal('createCollection', '📋 Creating Collections', `<div class='help-section'><h3>How to Create a Collection</h3><p>Follow these steps to create a new rule collection:</p><ol><li><strong>Select Author:</strong> Choose who owns this collection</li><li><strong>Review ID:</strong> Auto-generated from title (uppercase, underscores)</li><li><strong>Enter Title:</strong> Descriptive name for your collection</li><li><strong>Choose Logic:</strong> Select how rules should be evaluated (ALL, ANY, count, percent)</li><li><strong>Select Rules:</strong> Check the rules to include in this collection</li><li><strong>Save:</strong> Click 'Create Collection' to save</li></ol></div><div class='info-box info-box-tip'><div class='info-box-icon'>💡</div><div class='info-box-content'><strong>Tip:</strong> Use the Quick Test button to see how it works with sample data!</div></div>`);" title="Click for help">?</span>
+        </h1>
         
-        <div class="alert alert-info">
-            <strong>ℹ️ About Collections:</strong> Rule collections allow you to group multiple display rules together with flexible evaluation logic (ALL/ANY/COUNT/PERCENT).
-        </div>
+        <details class="disclosure">
+            <summary>ℹ️ About Collections - Click to learn more</summary>
+            <div class="disclosure-content">
+                <strong>What are Rule Collections?</strong>
+                <p>Rule collections allow you to group multiple display rules together with flexible evaluation logic. Instead of checking rules one by one, you can create complex conditions like:</p>
+                <ul>
+                    <li><strong>ALL rules must be true</strong> (AND logic) - Perfect for required conditions</li>
+                    <li><strong>ANY rule can be true</strong> (OR logic) - Show content if at least one condition is met</li>
+                    <li><strong>At least X rules true</strong> (Count-based) - Require a minimum number of conditions</li>
+                    <li><strong>At least X% rules true</strong> (Percentage-based) - Flexible threshold based on total rules</li>
+                </ul>
+                <div class="info-box info-box-success">
+                    <div class="info-box-icon">✓</div>
+                    <div class="info-box-content">
+                        <strong>Example:</strong> Create a "Premium User Access" collection that shows content when a user has ≥ 3 of 5 premium features enabled.
+                    </div>
+                </div>
+            </div>
+        </details>
 
         <div id="alertContainer"></div>
         
         <!-- Quick Test Section -->
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; text-align: center;">
+        <!-- <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; text-align: center;">
             <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 0.5rem;">🚀 Quick Test</div>
             <button type="button" class="btn" onclick="autoFillTestData()" style="background: white; color: #667eea; margin: 0.5rem;">
                 ⚡ Auto-Fill & Create Test Collection
             </button>
             <div style="font-size: 0.85rem; margin-top: 0.5rem; opacity: 0.9;">Click to instantly fill form with test data and create a collection</div>
-        </div>
+        </div> -->
 
         <form id="createCollectionForm">
             <div class="form-group">
-                <label for="collectionAuthor">Author: <span style="color: red;">*</span></label>
-                <select id="collectionAuthor" required>
+                <label for="collectionAuthor">
+                    Author: <span style="color: red;">*</span>
+                    <span class="help-icon" onclick="helpSystem.showModal('authors', HelpContent.authors.title, HelpContent.authors.content)" title="Learn about authors">?</span>
+                </label>
+                <select id="collectionAuthor" required data-help="Author who owns this collection - determines access and organization" title="Select collection author">
                     <option value="">-- Loading authors... --</option>
                 </select>
                 <small style="color: #666;">Select an author from the database</small>
             </div>
 
             <div class="form-group">
-                <label for="collectionId">Collection ID: <span style="color: red;">*</span></label>
-                <input type="text" id="collectionId" required readonly style="background: #e9ecef; cursor: not-allowed;">
+                <label for="collectionId">
+                    Collection ID: <span style="color: red;">*</span>
+                    <span class="help-icon" onclick="helpSystem.showModal('ids', HelpContent.ids.title, HelpContent.ids.content)" title="Learn about IDs">?</span>
+                </label>
+                <input type="text" id="collectionId" required readonly style="background: #e9ecef; cursor: not-allowed;" data-help="Unique identifier - auto-generated from title, cannot be changed after creation" title="Auto-generated ID">
                 <small style="color: #666;">Auto-generated unique identifier (cannot be edited)</small>
             </div>
 
             <div class="form-group">
                 <label for="collectionTitle">Collection Title: <span style="color: red;">*</span></label>
-                <input type="text" id="collectionTitle" required placeholder="e.g., User Eligibility Requirements">
+                <input type="text" id="collectionTitle" required placeholder="e.g., User Eligibility Requirements" data-help="Human-readable name for this collection - used to generate the ID" title="Enter a descriptive title">
                 <small style="color: #666;">Descriptive title for this collection</small>
             </div>
 
             <div class="logic-box">
-                <h4 style="margin-top: 0;">Rule Evaluation Logic</h4>
+                <h4 style="margin-top: 0;">
+                    Rule Evaluation Logic
+                    <span class="help-icon" onclick="helpSystem.showModal('logicTypes', HelpContent.logicTypes.title, HelpContent.logicTypes.content)" title="Learn about logic types">?</span>
+                </h4>
                 
                 <div class="form-group">
                     <label for="logicType">How should the rules be evaluated?</label>
-                    <select id="logicType" onchange="updateLogicDisplay()">
+                    <select id="logicType" onchange="updateLogicDisplay()" data-help="Choose how to evaluate the rules: ALL (AND), ANY (OR), count-based, or percentage-based" title="Select evaluation logic">
                         <option value="any">Display Group - ANY true (greater than 0 true)</option>
                         <option value="all">Display Group - ALL true (100% true)</option>
                         <option value="gt">Display Group - Number true &gt; X</option>
@@ -257,8 +287,8 @@
 
             <div class="button-group">
                 <button type="submit" class="btn btn-success">💾 Create Collection</button>
-                <button type="button" class="btn btn-warning" onclick="testButtonClick()" style="background: #ffc107;">🧪 TEST BUTTON CLICK</button>
-                <button type="button" class="btn btn-info" onclick="autoFillTestData()" style="background: #17a2b8;">🧪 Auto-Fill Test Data</button>
+                <!-- <button type="button" class="btn btn-warning" onclick="testButtonClick()" style="background: #ffc107;">🧪 TEST BUTTON CLICK</button>
+                <button type="button" class="btn btn-info" onclick="autoFillTestData()" style="background: #17a2b8;">🧪 Auto-Fill Test Data</button> -->
                 <button type="button" class="btn btn-secondary" onclick="goBack()">← Cancel</button>
             </div>
         </form>

@@ -1159,12 +1159,20 @@ async function getRuleContents(dbName, storeName, keys, grouprule) {
 function getGroupruleHeaderFromHtml() {
   console.log("function getGroupruleHeaderFromHtml() 2024-11-07-07:52");
   let grouprule = {};
-  grouprule.keyPathValue = ["groupruleStore",1,document.getElementById("groupruleAuthor").innerText,1,document.getElementById("groupruleID").innerText] ;
-    //grouprule.questionSource = grouprule.keyPathValue; Removed 2023-03-10 11:49
-    const tgroupHTML = document.getElementById("groupruleContent");
-    grouprule.groupruleContent = tgroupHTML.innerHTML ;
-    grouprule.groupruleContentInnerText = tgroupHTML.innerText ;
-    return grouprule
+  
+  // 2026-02-11: Use standardized dual keyPath format
+  const baseKeyPath = ["groupruleStore", 1, document.getElementById("groupruleAuthor").innerText, 1, document.getElementById("groupruleID").innerText];
+  const dualKeyPath = createDualKeyPath(baseKeyPath, false); // No timestamp yet
+  
+  grouprule.keyPathValue = dualKeyPath.keyPathValueBaseIndexDB;
+  grouprule.keyPathValueBaseIndexDB = dualKeyPath.keyPathValueBaseIndexDB;
+  grouprule.keyPathValueFireBase = dualKeyPath.keyPathValueFireBase;
+  
+  //grouprule.questionSource = grouprule.keyPathValue; Removed 2023-03-10 11:49
+  const tgroupHTML = document.getElementById("groupruleContent");
+  grouprule.groupruleContent = tgroupHTML.innerHTML ;
+  grouprule.groupruleContentInnerText = tgroupHTML.innerText ;
+  return grouprule
 }
 
 function removeDuplicateRowChoices(allArrayTemp, grouprule) {
@@ -1200,6 +1208,15 @@ async function groupruleForFireStoreAndStoreTimeStampsEtc(allArrayTemp, grouprul
     grouprule.firebaseVersionDateSince1969 = getFirebaseVersionDateSince1969(grouprule.versionDateSince1969);
     grouprule.localTimeString = Date(grouprule.versionDateSince1969);
     grouprule.UTCstring = Date(grouprule.versionDateSince1969);
+    
+    // 2026-02-11: Add timestamp to existing keyPath using dual format
+    if (grouprule.keyPathValue) {
+      const baseKeyPath = grouprule.keyPathValueBaseIndexDB || grouprule.keyPathValue;
+      const dualKeyPath = createDualKeyPath(baseKeyPath, true, grouprule.versionDateSince1969);
+      grouprule.keyPathValue = dualKeyPath.keyPathValueBaseIndexDB;
+      grouprule.keyPathValueBaseIndexDB = dualKeyPath.keyPathValueBaseIndexDB;
+      grouprule.keyPathValueFireBase = dualKeyPath.keyPathValueFireBase;
+    }
     
     // Save new rule logic settings (2026-01-29)
     grouprule.ruleLogicType = document.getElementById("ruleLogicType").value;
@@ -1684,6 +1701,37 @@ function getLowAsciiSrting() {
     //stringfunction.indexedDBPathValue  = getFirebaseKey (keyPathValue) "!1!"; //space is needed to show it is a number because only numbers are pefaced by a space, if it is text, it is pefaced by only a !
     return newStringList
 }
+/**
+ * Standardizes keyPath creation for dual-database system
+ * Creates both IndexedDB array format and Firestore string format
+ * @param {Array} keyPathArray - Array format keyPath for IndexedDB
+ * @param {boolean} includeTimestamp - Whether to add timestamp to keyPath (default: false)
+ * @param {number} timestamp - Optional timestamp (defaults to Date.now())
+ * @returns {Object} Object with keyPathValueBaseIndexDB (array) and keyPathValueFireBase (string)
+ * @date 2026-02-11 - Standardized keyPath handling for IndexedDB vs Firestore
+ */
+function createDualKeyPath(keyPathArray, includeTimestamp = false, timestamp = null) {
+  console.log("function createDualKeyPath() { 2026-02-11");
+  
+  // Create IndexedDB array format
+  const keyPathValueBaseIndexDB = [...keyPathArray];
+  
+  // Add timestamp if requested
+  if (includeTimestamp) {
+    const versionDateSince1969 = timestamp || Date.now();
+    const negativeVersion = getFirebaseVersionDateSince1969(versionDateSince1969);
+    keyPathValueBaseIndexDB.push(negativeVersion);
+  }
+  
+  // Create Firestore string format
+  const keyPathValueFireBase = stringKeypath(keyPathValueBaseIndexDB);
+  
+  return {
+    keyPathValueBaseIndexDB: keyPathValueBaseIndexDB,
+    keyPathValueFireBase: keyPathValueFireBase
+  };
+}
+
 function stringKeypathValueElement(element){
   console.log("function stringKeypathValueArray(element) { 2024-11-11-20:29");
   if(element === 1){
@@ -1880,13 +1928,18 @@ function findNestedArray(saveObject){
           tx = db.transaction("pendingStore", "readwrite");
           store = tx.objectStore("pendingStore");
           console.log("function storePendingSave(saveObject , db) { B.2");
-          //let negativeVersion = 9999999999999 - saveObject.versionDateSince1969; // No longer needed? ***
-          const negativeVersion = getFirebaseVersionDateSince1969(saveObject.versionDateSince1969);
-          saveObject.keyPathValue.push(negativeVersion);
-          saveObject.keyPathValueBaseIndexDB = [...saveObject.keyPathValue];
-          saveObject.keyPathValueFireBase = stringKeypath(saveObject.keyPathValue);
-          saveObject = JSON.parse(JSON.stringify(saveObject));
-          console.log("saveObject 2024-11-14-11:23");
+          
+          // 2026-02-11: Completed timestamp handling with dual keyPath format
+          // Create dual keyPath with timestamp for both IndexedDB and Firestore
+          const baseKeyPath = [...saveObject.keyPathValue];
+          const dualKeyPath = createDualKeyPath(baseKeyPath, true, saveObject.versionDateSince1969);
+          
+          // Store IndexedDB format
+          saveObject.keyPathValue = dualKeyPath.keyPathValueBaseIndexDB;
+          saveObject.keyPathValueBaseIndexDB = dualKeyPath.keyPathValueBaseIndexDB;
+          saveObject.keyPathValueFireBase = dualKeyPath.keyPathValueFireBase;
+          
+          console.log("saveObject 2026-02-11 (updated from 2024-11-14-11:23)");
           console.log(saveObject);
           store.put(saveObject);
           //saveObject.keyPathValue = [...saveObject.keyPathValueFireBase];
@@ -2013,11 +2066,16 @@ function findNestedArray(saveObject){
       saveObject.trueAnswerList = trueAnswerList ;
       saveObject.trueAnswerDescriptionList = trueAnswerDescriptionList ;
       saveObject.versionDateSince1969 = Date.now() ;
-      const negVersion =  9999999999999 - saveObject.versionDateSince1969;
-      console.log(negVersion);
-      //saveObject.dateAndTime = [saveObject.versionDateSince1969.toString(),saveObject.versionDateSince1969.toISOString()];
-      saveObject.keyPathValue = ["trueruleStore",1,saveObject.ruleAuthor,1,saveObject.ruleID,negVersion] ; // 2024-06-28
-      saveObject.keyPathValue = ["trueruleStore",1,saveObject.ruleAuthor,1,saveObject.ruleID] ; // 2024-06-28
+      
+      // 2026-02-11: Use standardized dual keyPath format
+      const baseKeyPath = ["trueruleStore", 1, saveObject.ruleAuthor, 1, saveObject.ruleID];
+      const dualKeyPath = createDualKeyPath(baseKeyPath, true, saveObject.versionDateSince1969);
+      
+      // Set both keyPath formats
+      saveObject.keyPathValue = dualKeyPath.keyPathValueBaseIndexDB;
+      saveObject.keyPathValueBaseIndexDB = dualKeyPath.keyPathValueBaseIndexDB;
+      saveObject.keyPathValueFireBase = dualKeyPath.keyPathValueFireBase;
+      
       saveObject.questionSource = ["questionStore",1,saveObject.questionAuthor,1,saveObject.questionID] ; //20200902 6:52am,  *** at this time there is some duplication, but consider leaving until saveObject.questionAuthor AND saveObject.questionID ARE NO LONGER NEEDED ***
       /*saveObject.ruleAuthor = saveObject.questionAuthor ;
       saveObject.ruleID = saveObject.questionID ;
@@ -2734,7 +2792,13 @@ function findNestedArray(saveObject){
     let questionObject = getDatabaseSetup() ;
     questionObject.store = "questionStore" ;
     questionObject.tx1 = "questionStore" ;
-    questionObject.keyPathValue = ["questionStore",1,ruleData.questionAuthor,1,ruleData.questionID] ;
+    
+    // 2026-02-11: Use standardized dual keyPath format
+    const baseKeyPath = ["questionStore", 1, ruleData.questionAuthor, 1, ruleData.questionID];
+    const dualKeyPath = createDualKeyPath(baseKeyPath, false);
+    questionObject.keyPathValue = dualKeyPath.keyPathValueBaseIndexDB;
+    questionObject.keyPathValueFireBase = dualKeyPath.keyPathValueFireBase;
+    
     getQuestionData(questionObject , ruleData )
   }
   
@@ -2825,13 +2889,13 @@ function findNestedArray(saveObject){
     checkDatabase.store = objectStore ;
     checkDatabase.tx1 = objectStore ;
     checkDatabase.tx2 = "readonly";
-    checkDatabase.keyPathValue = [
-      typeOfStore,
-      1,
-      theAuthor,
-      1,
-      theID
-    ];
+    
+    // 2026-02-11: Use standardized dual keyPath format
+    const baseKeyPath = [typeOfStore, 1, theAuthor, 1, theID];
+    const dualKeyPath = createDualKeyPath(baseKeyPath, false);
+    checkDatabase.keyPathValue = dualKeyPath.keyPathValueBaseIndexDB;
+    checkDatabase.keyPathValueFireBase = dualKeyPath.keyPathValueFireBase;
+    
     checkDatabase.database = "authorExcuTrust";
     let databaseOpenRequest = indexedDB.open(checkDatabase.database);
     databaseOpenRequest.onerror = () => {
@@ -2905,7 +2969,13 @@ function findNestedArray(saveObject){
             let questionObject = getDatabaseSetup() ;
             questionObject.store = "questionStore" ;
             questionObject.tx1 = "questionStore" ;
-            questionObject.keyPathValue = ["questionStore",1,allSavedItems.result.keyPathValue[2],1,allSavedItems.result.keyPathValue[4]] ;
+            
+            // 2026-02-11: Use standardized dual keyPath format
+            const baseKeyPath = ["questionStore", 1, allSavedItems.result.keyPathValue[2], 1, allSavedItems.result.keyPathValue[4]];
+            const dualKeyPath = createDualKeyPath(baseKeyPath, false);
+            questionObject.keyPathValue = dualKeyPath.keyPathValueBaseIndexDB;
+            questionObject.keyPathValueFireBase = dualKeyPath.keyPathValueFireBase;
+            
             let ruleData = undefined ;
             getQuestionData(questionObject , ruleData ) 
               
@@ -4197,12 +4267,20 @@ function findNestedArray(saveObject){
     else if(event.target.classList.contains("explanation")){
       if (sessionStorage.getItem( 'temp' ) !== event.target.innerHTML){
         let tObject = {} ;
-        tObject.keyPathValue = ["customer",1,"SCENARIO",1,event.target.dataset.author,1,event.target.dataset.id] ;
+        
+        // 2026-02-11: Use standardized dual keyPath format
+        const baseKeyPath = ["customer", 1, "SCENARIO", 1, event.target.dataset.author, 1, event.target.dataset.id];
+        const timestamp = Date.now();
+        const dualKeyPath = createDualKeyPath(baseKeyPath, true, timestamp);
+        
+        tObject.keyPathValue = dualKeyPath.keyPathValueBaseIndexDB;
+        tObject.keyPathValueBaseIndexDB = dualKeyPath.keyPathValueBaseIndexDB;
+        tObject.keyPathValueFireBase = dualKeyPath.keyPathValueFireBase;
+        tObject.versionDateSince1969 = timestamp;
+        
         tObject.ContentHTML = event.target.innerHTML ;
         tObject.ContentTEXT = event.target.innerText.trim() ;
-        let temp1 = [...tObject.keyPathValue] ;
-        temp1.unshift(Date.now(),1);
-        tObject.versionDateSince1969 = temp1 ;
+        
         const request = indexedDB.open("authorExcuTrust");
         request.onsuccess = function() {
           db = request.result;
