@@ -9,7 +9,10 @@ function addMissingStores(missingStores , version ) {
       //const db = databaseOpenRequest.result;
       let db = databaseOpenRequest.result;
       missingStores.forEach(element => {
-          let keyPathConfig = (element === "authorMetadata") ? {keyPath: "authorName"} : {keyPath: "keyPathValue"};
+          // snapshotStore uses snapshotId (string) as its key — the entire frozen doc is one record
+      let keyPathConfig = (element === "authorMetadata") ? {keyPath: "authorName"}
+                        : (element === "snapshotStore")  ? {keyPath: "snapshotId"}
+                        : {keyPath: "keyPathValue"};
           const store = db.createObjectStore(element, keyPathConfig); // Use appropriate keyPath
           if(element === "answerStore") {
             store.createIndex('versionDateSince1969', 'versionDateSince1969') ;
@@ -27,8 +30,18 @@ function addMissingStores(missingStores , version ) {
           } else if(element === "questionStore") {
             store.createIndex('versionDateSince1969', 'versionDateSince1969') ;
             console.log(`added missingIndex questionnaireRow for ${element}`) 
-          } 
-           else {
+          } else if(element === "snapshotStore") {
+            // 2026-02-26: per-document frozen JSON — the "Snapshot Folder"
+            // keyPath is snapshotId (string), NOT the composite array
+            store.createIndex('snapshotVersion',  'snapshotVersion') ;
+            store.createIndex('builtFromSource',  'builtFromSource') ;
+            console.log(`added missingIndex snapshotVersion, builtFromSource for ${element}`) ;
+          } else if(element === "diffLogStore") {
+            // 2026-02-26: audit trail — snapshot vs. current Historical
+            store.createIndex('documentId',        'documentId') ;
+            store.createIndex('reportGeneratedAt', 'reportGeneratedAt') ;
+            console.log(`added missingIndex documentId, reportGeneratedAt for ${element}`) ;
+          } else {
                       //const titleIndex = store.createIndex("by_title", "title", {unique: true});  * rarely if ever use this because plan is to rely on the keyPath to prevent dupicates
           //const authorIndex = store.createIndex("by_author", "author"); possibly use this with split strings which allow all values to be found in the index:   "objectStore.createIndex('hobbies', 'hobbies', { multiEntry: true});"  *** multiEntry *** 
           console.log(`added missingStores element ${element}`)  
@@ -48,7 +61,8 @@ function addMissingStores(missingStores , version ) {
 
 function upgradeFromSuccess(databaseOpenRequest1){
   const db1 = databaseOpenRequest1.result;
-  let  newStoreList = ["questionStore","formStore","questionnaireStore","customerStore","ruleStore","pendingStore", "aliasStore", "answerStore", "authorMetadata"] ;
+  // 2026-02-26: added snapshotStore (per-document frozen JSON) and diffLogStore (audit trail)
+  let  newStoreList = ["questionStore","formStore","questionnaireStore","customerStore","ruleStore","pendingStore", "aliasStore", "answerStore", "authorMetadata", "snapshotStore", "diffLogStore"] ;
   let missingStores = [];
   let oldStoreList = db1.objectStoreNames ;
   let exists ; 

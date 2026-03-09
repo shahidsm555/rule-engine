@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>snapshotManager — Front-End Tests</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+           background: #f0f2f5; padding: 1.5rem; }
+    h1  { font-size: 1.4rem; margin-bottom: 1rem; color: #1a1a2e; }
+    h2  { font-size: 1rem; margin: 1.2rem 0 .4rem; color: #333; text-transform: uppercase;
+          letter-spacing: .05em; }
+
+    /* ── toolbar ── */
+    .toolbar { display: flex; gap: .6rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    button   { padding: .45rem 1rem; border: none; border-radius: 6px; cursor: pointer;
+               font-size: .85rem; font-weight: 600; }
+    .btn-primary { background: #4f46e5; color: #fff; }
+    .btn-primary:hover { background: #4338ca; }
+    .btn-danger  { background: #dc2626; color: #fff; }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-neutral { background: #6b7280; color: #fff; }
+    .btn-neutral:hover { background: #4b5563; }
+
+    /* ── result list ── */
+    #results { list-style: none; margin-bottom: 1.5rem; }
+    #results li { padding: .5rem .8rem; margin: .3rem 0; border-radius: 6px;
+                  font-size: .87rem; border-left: 4px solid; }
+    .pass { background: #d1fae5; border-color: #10b981; color: #065f46; }
+    .fail { background: #fee2e2; border-color: #ef4444; color: #7f1d1d; }
+    .info { background: #e0f2fe; border-color: #38bdf8; color: #0c4a6e; }
+    .warn { background: #fef9c3; border-color: #facc15; color: #713f12; }
+
+    /* ── render preview ── */
+    #renderPreview { background: #fff; border: 1px solid #d1d5db; border-radius: 8px;
+                     padding: 1rem; min-height: 120px; max-height: 400px; overflow-y: auto; }
+    .questionnaire-row { padding: .35rem .5rem; border-bottom: 1px solid #f3f4f6;
+                         font-size: .85rem; }
+    .questionnaire-row:last-child { border-bottom: none; }
+    .trigger-complete { font-weight: 700; color: #059669; }
+    .row-loading      { color: #9ca3af; font-style: italic; }
+    .lazy-sentinel    { height: 1px; }
+
+    /* ── diff report ── */
+    #diffOutput { background: #1e1e2e; color: #cdd6f4; border-radius: 8px;
+                  padding: 1rem; font-family: monospace; font-size: .78rem;
+                  white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
+
+    /* ── summary bar ── */
+    #summary { font-size: .9rem; font-weight: 600; margin-bottom: .6rem; color: #374151; }
+  </style>
+</head>
+<body>
+
+<h1>snapshotManager.js — Front-End Test Console</h1>
+
+<div class="toolbar">
+  <button class="btn-primary" onclick="runAllTests()">▶ Run All Tests</button>
+  <button class="btn-primary" onclick="runSeedData()">1. Seed Data</button>
+  <button class="btn-primary" onclick="runBuildSnapshot()">2. Build Snapshot</button>
+  <button class="btn-primary" onclick="runRenderSnapshot()">3. Render to DOM</button>
+  <button class="btn-primary" onclick="runTriggerFire()">4. Fire a Trigger</button>
+  <button class="btn-primary" onclick="runDiffReport()">5. Diff Report</button>
+  <button class="btn-primary" onclick="runSourceRef()">6. sourceRef field</button>
+  <button class="btn-neutral" onclick="runInspectDB()">Inspect IndexedDB</button>
+  <button class="btn-danger"  onclick="clearResults()">Clear</button>
+</div>
+
+<div id="summary">No tests run yet.</div>
+<ul  id="results"></ul>
+
+<h2>3 · Rendered questionnaire rows (DocumentFragment → DOM)</h2>
+<div id="renderPreview"><em style="color:#9ca3af">Run Test 3 to populate</em></div>
+
+<h2>5 · Diff Report JSON</h2>
+<div id="diffOutput">Run Test 5 to populate</div>
+
+<!-- Dependencies -->
+<script src="setupIndexedDB.js"></script>
+<script src="snapshotManager.js"></script>
+
+<script>
+// ─────────────────────────────────────────────────────────────
+// Mini assertion helpers
+// ─────────────────────────────────────────────────────────────
+let passCount = 0, failCount = 0;
+
+function log(type, msg) {
+  const li = document.createElement('li');
+  li.className = type;
+  li.textContent = msg;
+  document.getElementById('results').appendChild(li);
+}
+function pass(msg) { passCount++; log('pass', '✅ ' + msg); updateSummary(); }
+function fail(msg) { failCount++; log('fail', '❌ ' + msg); updateSummary(); }
+function info(msg) { log('info', 'ℹ️  ' + msg); }
+function warn(msg) { log('warn', '⚠️  ' + msg); }
+
+function updateSummary() {
+  document.getElementById('summary').textContent =
+    `Results: ${passCount} passed · ${failCount} failed`;
+}
+function clearResults() {
+  document.getElementById('results').innerHTML = '';
+  document.getElementById('diffOutput').textContent = 'Run Test 5 to populate';
+  document.getElementById('renderPreview').innerHTML =
+    '<em style="color:#9ca3af">Run Test 3 to populate</em>';
+  passCount = 0; failCount = 0; updateSummary();
+}
+
+// ─────────────────────────────────────────────────────────────
+// Shared test data
+// ─────────────────────────────────────────────────────────────
+const TEST_AUTHOR          = 'TestAuthor';
+const TEST_QUESTIONNAIRE_KP = ['questionnaireStore', 1, TEST_AUTHOR, 1, 'QN-TEST-001'];
+const TEST_SNAPSHOT_ID     = 'TestAuthor!1!TestEngagement!1!snapshot01';
+
+/** 12 sample questions — enough to span 2 chunks at DEFAULT_CHUNK_SIZE=100, 
+    but we override chunk size to 3 in tests so lazy-loading is exercised. */
+const SAMPLE_QUESTIONS = Array.from({ length: 12 }, (_, i) => ({
+  keyPathValue:          ['questionStore', 1, TEST_AUTHOR, 1, `Q-${String(i + 1).padStart(3, '0')}`],
+  keyPathValueFireBase:  `questionStore!1!${TEST_AUTHOR}!1!Q-${String(i + 1).padStart(3, '0')}`,
+  questionAuthor:        TEST_AUTHOR,
+  questionID:            `Q-${String(i + 1).padStart(3, '0')}`,
+  questionContent:       `Sample question ${i + 1}: ${i < 3 ? '(DISPLAYED)' : '(pending)'}`,
+  questionContentInnerText: `Sample question ${i + 1}`,
+  versionDateSince1969:  1700000000000 + i * 1000,
+  type:                  'questionTypeDiv_text',
+  answers: [], answerSort: []
+}));
+
+/** Questionnaire with indent positions and display flags */
+const QUESTIONNAIRE_RECORD = {
+  keyPathValue:           TEST_QUESTIONNAIRE_KP,
+  keyPathValueFireBase:   TEST_QUESTIONNAIRE_KP.join('!1!'),
+  questionnaireAuthor:    TEST_AUTHOR,
+  questionnaireID:        'QN-TEST-001',
+  questionnaireContent:   'Test Questionnaire for snapshotManager',
+  versionDateSince1969:   1700000099999,
+  questionnaireRow: SAMPLE_QUESTIONS.map((q, i) => ({
+    rowId:               _indentId(i),
+    keyPathValue:        q.keyPathValue,
+    keyPathValueFireBase: q.keyPathValueFireBase,
+    displayed:           i < 3,          // first 3 are "displayed"
+    versionDateSince1969: q.versionDateSince1969
+  }))
+};
+
+function _indentId(i) {
+  // Produces indent ids: "1", "2", "3", "3.1", "3.2", "3.2.1", "4", ...
+  const ids = ['1','2','3','3.1','3.2','3.2.1','4','4.1','5','5.1','5.2','6'];
+  return ids[i] || String(i + 1);
+}
+
+// ─────────────────────────────────────────────────────────────
+// TEST 1 — Seed Data
+// ─────────────────────────────────────────────────────────────
+async function runSeedData() {
+  info('── Test 1: Seeding questionStore + questionnaireStore ──');
+  try {
+    await snapshotManager.dbBatchPut('questionStore', SAMPLE_QUESTIONS);
+    pass(`Seeded ${SAMPLE_QUESTIONS.length} questions into questionStore`);
+
+    await snapshotManager.dbPut('questionnaireStore', QUESTIONNAIRE_RECORD);
+    pass('Seeded questionnaire record into questionnaireStore');
+
+    // Verify round-trip read
+    const readBack = await snapshotManager.dbGet('questionnaireStore', TEST_QUESTIONNAIRE_KP);
+    if (readBack && readBack.questionnaireID === 'QN-TEST-001') {
+      pass('Round-trip read: questionnaireStore record verified');
+    } else {
+      fail('Round-trip read: questionnaire record NOT found after write');
+    }
+
+    const q1 = await snapshotManager.dbGet('questionStore',
+      ['questionStore', 1, TEST_AUTHOR, 1, 'Q-001']);
+    if (q1 && q1.questionID === 'Q-001') {
+      pass('Round-trip read: Q-001 verified in questionStore');
+    } else {
+      fail('Round-trip read: Q-001 NOT found in questionStore');
+    }
+  } catch (e) {
+    fail('Seed data threw: ' + e.message);
+    console.error(e);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// TEST 2 — buildSnapshot
+// ─────────────────────────────────────────────────────────────
+async function runBuildSnapshot() {
+  info('── Test 2: buildSnapshot ──');
+  try {
+    const snapshot = await snapshotManager.buildSnapshot({
+      snapshotId:           TEST_SNAPSHOT_ID,
+      documentTitle:        'Unit Test Engagement 2026',
+      questionnaireKeyPath: TEST_QUESTIONNAIRE_KP,
+      chunkSize:            3    // small chunk so lazy-loading is exercised in Test 3
+    });
+
+    if (!snapshot) { fail('buildSnapshot returned falsy'); return; }
+    pass('buildSnapshot returned a snapshot object');
+
+    // manifest completeness
+    if (snapshot.manifest.length === SAMPLE_QUESTIONS.length) {
+      pass(`manifest has all ${snapshot.manifest.length} rows`);
+    } else {
+      fail(`manifest has ${snapshot.manifest.length} rows, expected ${SAMPLE_QUESTIONS.length}`);
+    }
+
+    // displayed rows first (triggersComplete → displayed → indent)
+    const displayedCount = snapshot.manifest.filter(r => r.displayed).length;
+    if (displayedCount === 3) {
+      pass(`displayedData contains 3 displayed rows`);
+    } else {
+      fail(`Expected 3 displayed rows, got ${displayedCount}`);
+    }
+
+    // displayedData embedded
+    const embeddedCount = Object.keys(snapshot.displayedData).length;
+    if (embeddedCount === 3) {
+      pass(`displayedData embeds ${embeddedCount} full records`);
+    } else {
+      fail(`Expected 3 embedded records, got ${embeddedCount}`);
+    }
+
+    // pending chunks
+    if (snapshot.pendingChunks.length > 0) {
+      pass(`${snapshot.pendingChunks.length} pending chunks created (size ${snapshot.chunkSize} rows each)`);
+    } else {
+      fail('No pending chunks created — lazy loading will not work');
+    }
+
+    // order: displayed rows before non-displayed in manifest
+    const firstNonDisplayed = snapshot.manifest.findIndex(r => !r.displayed);
+    const lastDisplayed     = [...snapshot.manifest].reverse().findIndex(r => r.displayed);
+    if (firstNonDisplayed === -1 || firstNonDisplayed > (snapshot.manifest.length - lastDisplayed - 1)) {
+      pass('Sort order: displayed rows precede non-displayed rows in manifest');
+    } else {
+      fail('Sort order incorrect — non-displayed row appears before a displayed row');
+    }
+
+    // indent sort within displayed group: "3" must come before "3.1" before "3.2"
+    const displayedIds = snapshot.manifest.filter(r => r.displayed).map(r => r.rowId);
+    let indentOk = true;
+    for (let i = 1; i < displayedIds.length; i++) {
+      if (snapshotManager.compareIndent(displayedIds[i - 1], displayedIds[i]) > 0) {
+        indentOk = false; break;
+      }
+    }
+    indentOk ? pass('Indent sort order is correct within displayed group')
+             : fail('Indent sort order is wrong: ' + displayedIds.join(', '));
+
+    // persisted to IndexedDB
+    const saved = await snapshotManager.dbGet(snapshotManager.SNAPSHOT_STORE, TEST_SNAPSHOT_ID);
+    if (saved && saved.snapshotId === TEST_SNAPSHOT_ID) {
+      pass('Snapshot persisted to snapshotStore in IndexedDB');
+    } else {
+      fail('Snapshot NOT found in snapshotStore after buildSnapshot()');
+    }
+  } catch (e) {
+    fail('buildSnapshot threw: ' + e.message);
+    console.error(e);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// TEST 3 — renderSnapshotToDOM
+// ─────────────────────────────────────────────────────────────
+async function runRenderSnapshot() {
+  info('── Test 3: renderSnapshotToDOM (DocumentFragment + lazy sentinels) ──');
+  try {
+    const snapshot = await snapshotManager.dbGet(snapshotManager.SNAPSHOT_STORE, TEST_SNAPSHOT_ID);
+    if (!snapshot) { fail('Snapshot not found — run Test 2 first'); return; }
+
+    const container = document.getElementById('renderPreview');
+    container.innerHTML = '';   // clear previous
+
+    await snapshotManager.renderSnapshotToDOM(snapshot, container);
+
+    const renderedRows = container.querySelectorAll('.questionnaire-row');
+    if (renderedRows.length === 3) {
+      pass(`renderSnapshotToDOM inserted ${renderedRows.length} rows immediately (displayed only)`);
+    } else {
+      fail(`Expected 3 immediate rows, got ${renderedRows.length}`);
+    }
+
+    const sentinels = container.querySelectorAll('.lazy-sentinel');
+    if (sentinels.length === snapshot.pendingChunks.length) {
+      pass(`${sentinels.length} lazy sentinel(s) inserted for pending chunks`);
+    } else {
+      fail(`Expected ${snapshot.pendingChunks.length} sentinels, got ${sentinels.length}`);
+    }
+
+    // Verify data-row-id present
+    let allHaveRowId = true;
+    renderedRows.forEach(el => { if (!el.dataset.rowId) allHaveRowId = false; });
+    allHaveRowId ? pass('All rendered rows have data-row-id attribute')
+                 : fail('Some rendered rows missing data-row-id attribute');
+
+    // Verify indent margin applied (rows "3.1", "3.2" should have marginLeft > 0)
+    const indentedRow = container.querySelector('[data-row-id="3.1"]');
+    if (indentedRow && parseFloat(indentedRow.style.marginLeft) > 0) {
+      pass(`Indent margin applied: row 3.1 has marginLeft=${indentedRow.style.marginLeft}`);
+    } else {
+      warn('Could not verify indent margin on row 3.1 (may not be in displayed set)');
+    }
+
+    info('Scroll the render preview down to trigger lazy loading of pending chunks');
+  } catch (e) {
+    fail('renderSnapshotToDOM threw: ' + e.message);
+    console.error(e);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// TEST 4 — updateSnapshotDisplayState (trigger fires)
+// ─────────────────────────────────────────────────────────────
+async function runTriggerFire() {
+  info('── Test 4: updateSnapshotDisplayState (trigger fires row 4) ──');
+  try {
+    const before = await snapshotManager.dbGet(snapshotManager.SNAPSHOT_STORE, TEST_SNAPSHOT_ID);
+    if (!before) { fail('Snapshot not found — run Tests 2 & 3 first'); return; }
+
+    const displayedBefore = before.manifest.filter(r => r.displayed).length;
+
+    const container = document.getElementById('renderPreview');
+
+    // Fire trigger for row "4" (currently not displayed)
+    await snapshotManager.updateSnapshotDisplayState(
+      TEST_SNAPSHOT_ID, '4', container
+    );
+
+    const after = await snapshotManager.dbGet(snapshotManager.SNAPSHOT_STORE, TEST_SNAPSHOT_ID);
+    const displayedAfter = after.manifest.filter(r => r.displayed).length;
+
+    if (displayedAfter === displayedBefore + 1) {
+      pass(`Displayed count increased ${displayedBefore} → ${displayedAfter}`);
+    } else {
+      fail(`Expected ${displayedBefore + 1} displayed, got ${displayedAfter}`);
+    }
+
+    // displayedData should now include row 4's item
+    const row4Manifest = after.manifest.find(r => r.rowId === '4');
+    if (row4Manifest && row4Manifest.displayed) {
+      pass('Row 4 marked displayed:true in manifest');
+    } else {
+      fail('Row 4 still not displayed in manifest after updateSnapshotDisplayState');
+    }
+
+    if (row4Manifest && row4Manifest.triggersComplete) {
+      pass('Row 4 triggersComplete=true');
+    } else {
+      fail('Row 4 triggersComplete should be true after trigger fires');
+    }
+
+    const itemKey = row4Manifest ? row4Manifest.itemKey : null;
+    if (itemKey && after.displayedData[itemKey]) {
+      pass('Row 4 full data embedded in displayedData');
+    } else {
+      fail('Row 4 data NOT found in displayedData after trigger');
+    }
+
+    // Verify sort: triggersComplete row should now be first in manifest
+    const firstRow = after.manifest[0];
+    if (firstRow.triggersComplete) {
+      pass('Re-sort correct: triggersComplete row is first in manifest');
+    } else {
+      fail('Re-sort failed: first row does not have triggersComplete=true');
+    }
+
+    // Verify it was removed from pendingChunks
+    const stillInChunks = after.pendingChunks.some(c => c.rowIds.includes('4'));
+    if (!stillInChunks) {
+      pass('Row 4 removed from pendingChunks after trigger');
+    } else {
+      fail('Row 4 still present in pendingChunks after trigger — should have been removed');
+    }
+
+    // DOM check
+    const domRow4 = container.querySelector('[data-row-id="4"]');
+    if (domRow4) {
+      pass('Row 4 visible in DOM after trigger');
+    } else {
+      warn('Row 4 not yet in DOM (renderPreview may need to be re-rendered — run Test 3 first)');
+    }
+  } catch (e) {
+    fail('updateSnapshotDisplayState threw: ' + e.message);
+    console.error(e);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// TEST 5 — generateDiffReport
+// ─────────────────────────────────────────────────────────────
+async function runDiffReport() {
+  info('── Test 5: generateDiffReport (audit trail) ──');
+  try {
+    const snapshot = await snapshotManager.dbGet(snapshotManager.SNAPSHOT_STORE, TEST_SNAPSHOT_ID);
+    if (!snapshot) { fail('Snapshot not found — run Tests 2 first'); return; }
+
+    // Simulate a "current Historical" where:
+    //  - Q-001 has a newer version (updated)
+    //  - Q-002 is identical to snapshot
+    //  - Q-003 was DELETED from Historical
+    //  - Q-NEW is a new item in Historical not in snapshot
+    const currentHistorical = {};
+    Object.entries(snapshot.displayedData).forEach(([key, record]) => {
+      currentHistorical[key] = { ...record };  // copy
+    });
+
+    // Simulate updated version for Q-001
+    const q001key = `questionStore!1!${TEST_AUTHOR}!1!Q-001`;
+    if (currentHistorical[q001key]) {
+      currentHistorical[q001key].versionDateSince1969 += 99999; // newer version
+    }
+
+    // Simulate deletion: remove Q-003 from current Historical
+    const q003key = `questionStore!1!${TEST_AUTHOR}!1!Q-003`;
+    delete currentHistorical[q003key];
+
+    // Simulate new item in Historical not in snapshot
+    const qNewKey = `questionStore!1!${TEST_AUTHOR}!1!Q-NEW`;
+    currentHistorical[qNewKey] = { versionDateSince1969: Date.now(), questionID: 'Q-NEW' };
+
+    const report = await snapshotManager.generateDiffReport(snapshot, currentHistorical);
+
+    if (report) {
+      pass('generateDiffReport returned a report object');
+    } else {
+      fail('generateDiffReport returned falsy'); return;
+    }
+
+    if (report.summary.updated >= 1) {
+      pass(`Diff detected ${report.summary.updated} updated item(s) (Q-001 version bump)`);
+    } else {
+      fail('Expected at least 1 updated item, got ' + report.summary.updated);
+    }
+
+    if (report.summary.deletedFromHistorical >= 1) {
+      pass(`Diff detected ${report.summary.deletedFromHistorical} deleted item(s) (Q-003)`);
+    } else {
+      fail('Expected 1 deleted item, got ' + report.summary.deletedFromHistorical);
+    }
+
+    if (report.summary.newInHistorical >= 1) {
+      pass(`Diff detected ${report.summary.newInHistorical} new Historical item(s) (Q-NEW)`);
+    } else {
+      fail('Expected 1 new-in-historical item, got ' + report.summary.newInHistorical);
+    }
+
+    const saved = await snapshotManager.dbGet(snapshotManager.DIFF_LOG_STORE, report.keyPathValue);
+    if (saved) {
+      pass('Diff report persisted to diffLogStore');
+    } else {
+      fail('Diff report NOT found in diffLogStore after generateDiffReport()');
+    }
+
+    // Show JSON in the output panel
+    document.getElementById('diffOutput').textContent = JSON.stringify(report, null, 2);
+
+  } catch (e) {
+    fail('generateDiffReport threw: ' + e.message);
+    console.error(e);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// TEST 6 — buildSourceRef (Lego connector field)
+// ─────────────────────────────────────────────────────────────
+function runSourceRef() {
+  info('── Test 6: buildSourceRef (Lego / insert-from-another-questionnaire) ──');
+  try {
+    const ref = snapshotManager.buildSourceRef({
+      sourceStore:           'questionnaireStore',
+      sourceAuthor:          'DrSmith',
+      sourceQuestionnaireId: 'Q2024-audit-core',
+      sourceRowPosition:     '3.2.1',
+      sourceVersionDate:     1707350400000,
+      insertedBy:            TEST_AUTHOR
+    });
+
+    if (ref && ref.sourceAuthor === 'DrSmith') {
+      pass('buildSourceRef returns object with sourceAuthor');
+    } else {
+      fail('buildSourceRef missing sourceAuthor');
+    }
+    if (ref.sourceQuestionnaireId === 'Q2024-audit-core') {
+      pass('buildSourceRef sourceQuestionnaireId correct');
+    } else {
+      fail('buildSourceRef sourceQuestionnaireId wrong');
+    }
+    if (ref.sourceRowPosition === '3.2.1') {
+      pass('buildSourceRef sourceRowPosition correct');
+    } else {
+      fail('buildSourceRef sourceRowPosition wrong');
+    }
+    if (typeof ref.insertedAt === 'number' && ref.insertedAt > 0) {
+      pass('buildSourceRef insertedAt is a valid timestamp');
+    } else {
+      fail('buildSourceRef insertedAt is not a valid timestamp');
+    }
+    if (ref.insertedBy === TEST_AUTHOR) {
+      pass('buildSourceRef insertedBy correct');
+    } else {
+      fail('buildSourceRef insertedBy wrong');
+    }
+
+    // Show the resulting object in the diff panel as confirmation
+    document.getElementById('diffOutput').textContent =
+      'sourceRef object:\n' + JSON.stringify(ref, null, 2);
+  } catch (e) {
+    fail('buildSourceRef threw: ' + e.message);
+    console.error(e);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Inspect — dump all IndexedDB stores to console
+// ─────────────────────────────────────────────────────────────
+async function runInspectDB() {
+  info('── Inspect IndexedDB (see browser DevTools Console for full output) ──');
+  try {
+    for (const store of [
+      'questionStore', 'questionnaireStore',
+      snapshotManager.SNAPSHOT_STORE, snapshotManager.DIFF_LOG_STORE
+    ]) {
+      const records = await snapshotManager.dbGetAll(store);
+      console.group(`📦 ${store} (${records.length} records)`);
+      console.table(records.map(r => ({
+        key:     JSON.stringify(r.keyPathValue || r.snapshotId || r.documentId),
+        version: r.versionDateSince1969 || r.snapshotVersion || '-'
+      })));
+      console.groupEnd();
+      info(`${store}: ${records.length} record(s) — see DevTools Console for details`);
+    }
+  } catch (e) {
+    fail('Inspect threw: ' + e.message);
+    console.error(e);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Run All
+// ─────────────────────────────────────────────────────────────
+async function runAllTests() {
+  clearResults();
+  info('══ Running all tests in sequence ══');
+  await runSeedData();
+  await runBuildSnapshot();
+  await runRenderSnapshot();
+  await runTriggerFire();
+  await runDiffReport();
+  runSourceRef();
+  info('══ All tests complete ══');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Question</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="design_system.css">
+    <link rel="stylesheet" href="modern_styles.css">
+    <link rel="stylesheet" href="help_system.css">
+    
+    <!-- jQuery -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/7.22.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.22.1/firebase-firestore.js"></script>
+
+    <!-- IndexedDB Setup -->
+    <script src="setupIndexedDB.js"></script>
+    <script src="GenerateRule.js"></script>
+    <script src="help_system.js"></script>
+    
+    <style>
+        .page-header {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border-radius: 8px;
+        }
+        .page-header.view-mode {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .form-section {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .form-section h3 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #f5576c;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .form-section.view-mode h3 {
+            border-bottom-color: #764ba2;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.3rem;
+            color: #555;
+        }
+        .form-group label .required {
+            color: #dc3545;
+        }
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            border-color: #f5576c;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(245, 87, 108, 0.2);
+        }
+        .form-group input.invalid,
+        .form-group textarea.invalid {
+            border-color: #dc3545;
+            box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.15);
+        }
+        .form-group .help-text {
+            font-size: 0.85rem;
+            color: #888;
+            margin-top: 0.25rem;
+        }
+        .nav-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        /* Question type grid */
+        .type-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 0.5rem;
+        }
+        .type-option {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #fafafa;
+        }
+        .type-option:hover { border-color: #f5576c; background: #fff0f3; }
+        .type-option.selected { border-color: #f5576c; background: #fce4ec; font-weight: 600; }
+        .type-option input[type="radio"] { width: auto; margin: 0; }
+
+        /* Choices section */
+        .choices-section { display: none; }
+        .choices-section.visible { display: block; }
+        .choice-row {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            padding: 0.5rem;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border: 1px solid #eee;
+        }
+        .choice-row .choice-num { font-weight: 700; color: #888; min-width: 24px; text-align: center; }
+        .choice-row input[type="text"]   { flex: 1; width: auto; }
+        .choice-row input[type="number"] { width: 70px; }
+        .choice-row label {
+            font-weight: normal;
+            white-space: nowrap;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        .choice-row label input[type="checkbox"] { width: auto; }
+        .choice-row .remove-choice {
+            background: #dc3545; color: white; border: none; border-radius: 50%;
+            width: 26px; height: 26px; font-size: 0.9rem; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .choice-row .remove-choice:hover { background: #c82333; }
+
+        /* Requirements */
+        .requirements-grid { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+        .req-option { display: flex; align-items: center; gap: 0.5rem; }
+        .req-option input[type="checkbox"] { width: auto; }
+
+        /* Save bar */
+        .save-bar {
+            position: sticky; bottom: 0; background: white;
+            padding: 1rem 1.5rem; border-top: 2px solid #f5576c;
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
+            display: flex; justify-content: space-between; align-items: center;
+            border-radius: 8px 8px 0 0; margin-top: 1rem;
+        }
+        .save-bar.view-mode { border-top-color: #764ba2; }
+        .validation-message { color: #dc3545; font-weight: 600; }
+        .validation-message.valid { color: #28a745; }
+
+        /* Readonly state */
+        .readonly input, .readonly textarea, .readonly select { background: #e9ecef; pointer-events: none; }
+        .readonly .type-option { pointer-events: none; opacity: 0.7; }
+        .readonly .type-option.selected { opacity: 1; }
+        .readonly .remove-choice { display: none; }
+        .readonly .req-option input { pointer-events: none; }
+
+        /* Linked rules */
+        .linked-rules-section {
+            margin-top: 0.75rem;
+            padding: 1rem;
+            background: #e7f3ff;
+            border-radius: 8px;
+        }
+        .linked-rule-badge {
+            display: inline-block; padding: 0.3rem 0.7rem; margin: 0.2rem;
+            border-radius: 10px; font-size: 0.8rem;
+            background: white; color: #004085; cursor: pointer;
+            border: 1px solid #b8daff;
+        }
+        .linked-rule-badge:hover { background: #b8daff; }
+
+        /* Loading */
+        .loading { text-align: center; padding: 3rem; color: #888; font-size: 1.2rem; }
+    </style>
+</head>
+<body>
+    <div class="container" style="max-width: 900px; margin: 0 auto; padding: 2rem 2rem 0 2rem;" id="mainContainer">
+        
+        <a href="ManageQuestions.html" class="nav-back btn btn-outline-secondary">
+            ← Back to Manage Questions
+        </a>
+
+        <div class="page-header" id="pageHeader">
+            <h1 style="margin: 0 0 0.5rem 0;" id="pageTitle">✏️ Edit Question</h1>
+            <p style="margin: 0; opacity: 0.9;" id="pageSubtitle">Modify the question details and save</p>
+        </div>
+
+        <div class="loading" id="loadingState">Loading question...</div>
+
+        <!-- Form wrapper (hidden until loaded) -->
+        <div id="formWrapper" style="display:none;">
+
+            <!-- Identity -->
+            <div class="form-section" id="sectionIdentity">
+                <h3>📝 Question Identity</h3>
+                <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+                    <div class="form-group" style="flex:1; min-width:200px;">
+                        <label>Author <span class="required">*</span></label>
+                        <select id="questionAuthor" onchange="validateForm();" disabled>
+                            <option value="">-- Select Author --</option>
+                        </select>
+                        <div class="help-text" style="font-size:0.85rem; color:#888; margin-top:0.25rem;">Author can be changed in edit mode</div>
+                    </div>
+                    <div class="form-group" style="flex:2; min-width:250px;">
+                        <label>Question ID</label>
+                        <input type="text" id="questionID" readonly style="background:#e9ecef;">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content -->
+            <div class="form-section" id="sectionContent">
+                <h3>💬 Question Content</h3>
+                <div class="form-group">
+                    <label>Question Text <span class="required">*</span></label>
+                    <textarea id="questionContent" rows="3" oninput="validateForm();"></textarea>
+                </div>
+            </div>
+
+            <!-- Type -->
+            <div class="form-section" id="sectionType">
+                <h3>🔧 Question Type <span class="required">*</span></h3>
+                <div class="type-grid" id="typeGrid">
+                    <label class="type-option" data-type="questionTypeDiv_radio">
+                        <input type="radio" name="questionType" value="questionTypeDiv_radio"> 🔘 Radio Button
+                    </label>
+                    <label class="type-option" data-type="questionTypeDiv_checkbox">
+                        <input type="radio" name="questionType" value="questionTypeDiv_checkbox"> ☑️ Checkbox
+                    </label>
+                    <label class="type-option" data-type="questionTypeDiv_dropdown">
+                        <input type="radio" name="questionType" value="questionTypeDiv_dropdown"> 📋 Drop Down
+                    </label>
+                    <label class="type-option" data-type="questionTypeDiv_modal">
+                        <input type="radio" name="questionType" value="questionTypeDiv_modal"> 🪟 Modal
+                    </label>
+                    <label class="type-option" data-type="questionTypeDiv_text">
+                        <input type="radio" name="questionType" value="questionTypeDiv_text"> 📝 Text
+                    </label>
+                    <label class="type-option" data-type="questionTypeDiv_number">
+                        <input type="radio" name="questionType" value="questionTypeDiv_number"> 🔢 Number
+                    </label>
+                    <label class="type-option" data-type="questionTypeDiv_date">
+                        <input type="radio" name="questionType" value="questionTypeDiv_date"> 📅 Date
+                    </label>
+                    <label class="type-option" data-type="questionTypeDiv_datetime-local">
+                        <input type="radio" name="questionType" value="questionTypeDiv_datetime-local"> 🕐 Local Time
+                    </label>
+                    <label class="type-option" data-type="questionTypeDiv_email">
+                        <input type="radio" name="questionType" value="questionTypeDiv_email"> 📧 Email
+                    </label>
+                    <label class="type-option" data-type="questionTypeDiv_tel">
+                        <input type="radio" name="questionType" value="questionTypeDiv_tel"> 📞 Telephone
+                    </label>
+                    <label class="type-option" data-type="questionTypeDiv_url">
+                        <input type="radio" name="questionType" value="questionTypeDiv_url"> 🌐 URL
+                    </label>
+                    <label class="type-option" data-type="questionTypeDiv_file">
+                        <input type="radio" name="questionType" value="questionTypeDiv_file"> 📁 File
+                    </label>
+                    <label class="type-option" data-type="questionTypeDiv_password">
+                        <input type="radio" name="questionType" value="questionTypeDiv_password"> 🔒 Password
+                    </label>
+                    <label class="type-option" data-type="questionTypeDiv_month">
+                        <input type="radio" name="questionType" value="questionTypeDiv_month"> 📆 Month
+                    </label>
+                    <label class="type-option" data-type="questionTypeDiv_week">
+                        <input type="radio" name="questionType" value="questionTypeDiv_week"> 📅 Week
+                    </label>
+                    <label class="type-option" data-type="questionTypeDiv_na">
+                        <input type="radio" name="questionType" value="questionTypeDiv_na"> ℹ️ N/A (info only)
+                    </label>
+                    <label class="type-option" data-type="questionTypeDiv_naExplained">
+                        <input type="radio" name="questionType" value="questionTypeDiv_naExplained"> ❗ N/A (requires explanation)
+                    </label>
+                </div>
+            </div>
+
+            <!-- Answer Choices -->
+            <div class="form-section choices-section" id="choicesSection">
+                <h3>📋 Answer Choices</h3>
+                <div id="choicesContainer"></div>
+                <button class="btn btn-primary" id="addChoiceBtn" onclick="addChoice()" style="margin-top:0.5rem;">
+                    ➕ Add Choice
+                </button>
+            </div>
+
+            <!-- Requirements -->
+            <div class="form-section" id="sectionRequirements">
+                <h3>⚙️ Requirements</h3>
+                <div class="requirements-grid">
+                    <label class="req-option">
+                        <input type="checkbox" id="reqAnswerRequired"> Answer Required
+                    </label>
+                    <label class="req-option">
+                        <input type="checkbox" id="reqExplainUnanswered"> Explanation if Unanswered
+                    </label>
+                    <label class="req-option">
+                        <input type="checkbox" id="reqExplainAnswered"> Explanation if Answered
+                    </label>
+                </div>
+            </div>
+
+            <!-- Linked rules -->
+            <div class="form-section" id="linkedRulesSection" style="display:none;">
+                <h3>🔗 Linked Display Rules</h3>
+                <div id="linkedRulesContent"></div>
+            </div>
+
+            <!-- Metadata (read-only info) -->
+            <div class="form-section">
+                <h3>📄 Metadata</h3>
+                <div style="display:flex; gap:2rem; flex-wrap:wrap; color:#666; font-size:0.9rem;">
+                    <div>Last Modified: <strong id="metaLastModified">-</strong></div>
+                    <div>Version: <strong id="metaVersion">-</strong></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save bar -->
+    <div class="save-bar" id="saveBar" style="display:none;">
+        <span class="validation-message" id="validationMsg">Loading...</span>
+        <div style="display:flex; gap:0.5rem;">
+            <button class="btn btn-outline-secondary" onclick="window.location.href='ManageQuestions.html'">Cancel</button>
+            <button class="btn btn-primary" id="saveBtn" onclick="saveQuestion()" disabled style="display:none;">💾 Save Changes</button>
+            <button class="btn btn-primary" id="editBtn" onclick="switchToEdit()" style="display:none;">✏️ Switch to Edit</button>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // State
+        // ============================================================
+        const CHOICE_TYPES = ['questionTypeDiv_radio', 'questionTypeDiv_checkbox', 'questionTypeDiv_dropdown', 'questionTypeDiv_modal'];
+        let mode = 'edit'; // 'edit' or 'view'
+        let originalData = null;
+        let paramID = '';
+        let savedAuthor = ''; // track original author for key change detection
+
+        // ============================================================
+        // Parse URL params
+        // ============================================================
+        (function() {
+            const params = new URLSearchParams(window.location.search);
+            paramID     = (params.get('id') || '').trim();
+            mode        = params.get('mode') === 'view' ? 'view' : 'edit';
+
+            if (!paramID) {
+                document.getElementById('loadingState').textContent = '❌ Missing id URL parameter.';
+                return;
+            }
+
+            // Set header based on mode
+            if (mode === 'view') {
+                document.getElementById('pageHeader').classList.add('view-mode');
+                document.getElementById('pageTitle').textContent = '👁️ View Question';
+                document.getElementById('pageSubtitle').textContent = 'Read-only view of question details';
+            }
+
+            // Load question after DB init
+            setTimeout(() => {
+                loadAuthors();
+                loadQuestion();
+            }, 500);
+        })();
+
+        // ============================================================
+        // Load authors from authorMetadata store
+        // ============================================================
+        function loadAuthors(preselect) {
+            const database = "authorExcuTrust";
+            const req = indexedDB.open(database);
+            req.onsuccess = () => {
+                const db = req.result;
+                if (!db.objectStoreNames.contains('authorMetadata')) {
+                    db.close();
+                    return;
+                }
+                const tx = db.transaction('authorMetadata', 'readonly');
+                const store = tx.objectStore('authorMetadata');
+                const getAll = store.getAll();
+                getAll.onsuccess = () => {
+                    const authors = getAll.result || [];
+                    const select = document.getElementById('questionAuthor');
+                    // Keep only the default option
+                    select.innerHTML = '<option value="">-- Select Author --</option>';
+                    authors.sort((a, b) => (a.authorName || '').localeCompare(b.authorName || ''));
+                    authors.forEach(a => {
+                        const opt = document.createElement('option');
+                        opt.value = a.authorName;
+                        opt.textContent = a.authorName + (a.fullName ? ` (${a.fullName})` : '');
+                        select.appendChild(opt);
+                    });
+                    // Pre-select saved author if available
+                    if (preselect || savedAuthor) {
+                        select.value = preselect || savedAuthor;
+                    }
+                    db.close();
+                };
+                getAll.onerror = () => db.close();
+            };
+        }
+
+        // ============================================================
+        // Load question from IndexedDB — search by unique questionID
+        // ============================================================
+        function loadQuestion() {
+            const database = "authorExcuTrust";
+            const req = indexedDB.open(database);
+
+            req.onsuccess = () => {
+                const db = req.result;
+                if (!db.objectStoreNames.contains('questionStore')) {
+                    document.getElementById('loadingState').textContent = '❌ questionStore not found.';
+                    db.close();
+                    return;
+                }
+
+                // Build transaction — include ruleStore if available
+                const stores = ['questionStore'];
+                if (db.objectStoreNames.contains('ruleStore')) stores.push('ruleStore');
+
+                const tx = db.transaction(stores, 'readonly');
+                const qStore = tx.objectStore('questionStore');
+                const getAllReq = qStore.getAll();
+
+                let linkedRules = [];
+                if (stores.includes('ruleStore')) {
+                    const rStore = tx.objectStore('ruleStore');
+                    const rReq = rStore.getAll();
+                    rReq.onsuccess = () => {
+                        const allRules = rReq.result || [];
+                        // Will be filtered once we find the question
+                        linkedRules = allRules;
+                    };
+                }
+
+                getAllReq.onsuccess = () => {
+                    const allQuestions = getAllReq.result || [];
+                    db.close();
+
+                    // Find question by unique questionID
+                    const q = allQuestions.find(item => {
+                        const qID = item.questionID || (item.keyPathValue ? item.keyPathValue[4] : '');
+                        return qID === paramID;
+                    });
+
+                    if (!q) {
+                        document.getElementById('loadingState').textContent = `❌ Question not found: ${paramID}`;
+                        return;
+                    }
+
+                    originalData = q;
+
+                    // Filter linked rules for this question
+                    const qAuthor = q.questionAuthor || q.keyPathValue[2] || '';
+                    const qID = q.questionID || q.keyPathValue[4] || '';
+                    const filteredRules = linkedRules.filter(r => {
+                        if (!r.keyPathValue || r.keyPathValue[0] !== 'trueruleStore') return false;
+                        const qs = r.questionSource || [];
+                        return qs[2] === qAuthor && qs[4] === qID;
+                    });
+
+                    populateForm(q, filteredRules);
+                };
+                getAllReq.onerror = () => {
+                    db.close();
+                    document.getElementById('loadingState').textContent = '❌ Error loading question.';
+                };
+            };
+            req.onerror = () => {
+                document.getElementById('loadingState').textContent = '❌ Error opening database.';
+            };
+        }
+
+        // ============================================================
+        // Populate form
+        // ============================================================
+        function populateForm(q, linkedRules) {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('formWrapper').style.display = 'block';
+            document.getElementById('saveBar').style.display = 'flex';
+
+            // Identity
+            savedAuthor = q.questionAuthor || q.keyPathValue[2] || '';
+            // Set author dropdown value (authors may still be loading, so also set via loadAuthors)
+            const authorSelect = document.getElementById('questionAuthor');
+            authorSelect.value = savedAuthor;
+            if (!authorSelect.value) {
+                // Author not in dropdown yet — add it temporarily
+                const opt = document.createElement('option');
+                opt.value = savedAuthor;
+                opt.textContent = savedAuthor;
+                authorSelect.appendChild(opt);
+                authorSelect.value = savedAuthor;
+            }
+            // Reload authors to ensure full list is populated with correct selection
+            loadAuthors(savedAuthor);
+            document.getElementById('questionID').value = q.questionID || q.keyPathValue[4] || '';
+
+            // Content
+            document.getElementById('questionContent').value = q.questionContentInnerText || q.questionContent || '';
+
+            // Type
+            const qType = q.questionType || '';
+            if (qType) {
+                const radio = document.querySelector(`input[name="questionType"][value="${qType}"]`);
+                if (radio) {
+                    radio.checked = true;
+                    radio.closest('.type-option').classList.add('selected');
+                }
+            }
+
+            // Show choices section if applicable
+            if (CHOICE_TYPES.includes(qType)) {
+                document.getElementById('choicesSection').classList.add('visible');
+                // Populate choices
+                if (q.questionAnswerDescription && q.questionAnswerDescription.length) {
+                    q.questionAnswerDescription.forEach((desc, i) => {
+                        const text = q.questionAnswerDescriptionInnerText ? q.questionAnswerDescriptionInnerText[i] : desc;
+                        const sort = q.questionAnswerSort ? q.questionAnswerSort[i] : i + 1;
+                        const explain = q.checkboxExplain ? q.checkboxExplain[i] : false;
+                        const locked = q.checkboxNoChange ? q.checkboxNoChange[i] : false;
+                        addChoice(text, sort, explain, locked);
+                    });
+                }
+            }
+
+            // Requirements
+            document.getElementById('reqAnswerRequired').checked = !!q.questionUnansweredComplete;
+            document.getElementById('reqExplainUnanswered').checked = !!q.questionUnansweredRequiresExplanation;
+            document.getElementById('reqExplainAnswered').checked = !!q.questionAnsweredRequiresExplanation;
+
+            // Metadata
+            document.getElementById('metaLastModified').textContent = q.localTimeString || (q.versionDateSince1969 ? new Date(q.versionDateSince1969).toLocaleString() : '-');
+            document.getElementById('metaVersion').textContent = q.versionDateSince1969 || '-';
+
+            // Linked rules
+            if (linkedRules && linkedRules.length > 0) {
+                document.getElementById('linkedRulesSection').style.display = 'block';
+                const content = document.getElementById('linkedRulesContent');
+                content.innerHTML = `<p>${linkedRules.length} display rule(s) reference this question:</p>`;
+                linkedRules.forEach(r => {
+                    const rId = r.ruleID || r.keyPathValue[4] || '?';
+                    const rAuthor = r.ruleAuthor || r.keyPathValue[2] || '?';
+                    const badge = document.createElement('span');
+                    badge.className = 'linked-rule-badge';
+                    badge.textContent = `📋 ${rAuthor} / ${rId}`;
+                    badge.title = r.ruleContent || '';
+                    badge.onclick = () => window.location.href = `editRule.html?action=view&id=${encodeURIComponent(rId)}`;
+                    content.appendChild(badge);
+                });
+            }
+
+            // Apply mode
+            if (mode === 'view') {
+                applyViewMode();
+            } else {
+                // Enable author dropdown in edit mode
+                document.getElementById('questionAuthor').disabled = false;
+                document.getElementById('saveBtn').style.display = 'inline-block';
+                validateForm();
+            }
+        }
+
+        // ============================================================
+        // View mode
+        // ============================================================
+        function applyViewMode() {
+            document.getElementById('mainContainer').classList.add('readonly');
+            document.getElementById('questionAuthor').disabled = true;
+            document.getElementById('saveBtn').style.display = 'none';
+            document.getElementById('editBtn').style.display = 'inline-block';
+            document.getElementById('addChoiceBtn').style.display = 'none';
+            document.getElementById('validationMsg').textContent = 'View-only mode';
+            document.getElementById('validationMsg').classList.add('valid');
+            document.querySelectorAll('.save-bar').forEach(el => el.classList.add('view-mode'));
+        }
+
+        function switchToEdit() {
+            mode = 'edit';
+            document.getElementById('mainContainer').classList.remove('readonly');
+            document.getElementById('questionAuthor').disabled = false;
+            document.getElementById('pageHeader').classList.remove('view-mode');
+            document.getElementById('pageTitle').textContent = '✏️ Edit Question';
+            document.getElementById('pageSubtitle').textContent = 'Modify the question details and save';
+            document.getElementById('saveBtn').style.display = 'inline-block';
+            document.getElementById('editBtn').style.display = 'none';
+            document.getElementById('addChoiceBtn').style.display = 'inline-block';
+            document.querySelectorAll('.save-bar').forEach(el => el.classList.remove('view-mode'));
+            validateForm();
+        }
+
+        // ============================================================
+        // Type selection
+        // ============================================================
+        document.querySelectorAll('#typeGrid .type-option').forEach(opt => {
+            opt.addEventListener('click', function() {
+                if (mode === 'view') return;
+                document.querySelectorAll('#typeGrid .type-option').forEach(o => o.classList.remove('selected'));
+                this.classList.add('selected');
+                const val = this.querySelector('input').value;
+                const section = document.getElementById('choicesSection');
+                if (CHOICE_TYPES.includes(val)) {
+                    section.classList.add('visible');
+                    if (document.querySelectorAll('#choicesContainer .choice-row').length === 0) {
+                        addChoice(); addChoice();
+                    }
+                } else {
+                    section.classList.remove('visible');
+                }
+                validateForm();
+            });
+        });
+
+        // ============================================================
+        // Choices
+        // ============================================================
+        function addChoice(text, sort, explain, locked) {
+            const container = document.getElementById('choicesContainer');
+            const index = container.querySelectorAll('.choice-row').length + 1;
+            const row = document.createElement('div');
+            row.className = 'choice-row';
+            row.innerHTML = `
+                <span class="choice-num">${index}</span>
+                <input type="text" class="choice-text" placeholder="Answer description..." value="${text || ''}">
+                <input type="number" class="choice-sort" value="${sort != null ? sort : index}" min="1" title="Sort order" style="width:70px;">
+                <label title="Requires explanation"><input type="checkbox" class="choice-explain" ${explain ? 'checked' : ''}> Explain</label>
+                <label title="Locked"><input type="checkbox" class="choice-locked" ${locked ? 'checked' : ''}> Lock</label>
+                <button class="remove-choice" onclick="removeChoice(this)" title="Remove">×</button>
+            `;
+            container.appendChild(row);
+            renumberChoices();
+        }
+
+        function removeChoice(btn) {
+            btn.closest('.choice-row').remove();
+            renumberChoices();
+        }
+
+        function renumberChoices() {
+            document.querySelectorAll('#choicesContainer .choice-row').forEach((row, i) => {
+                row.querySelector('.choice-num').textContent = i + 1;
+            });
+        }
+
+        // ============================================================
+        // Validation
+        // ============================================================
+        function validateForm() {
+            const content = document.getElementById('questionContent').value.trim();
+            const typeEl  = document.querySelector('input[name="questionType"]:checked');
+            const msg     = document.getElementById('validationMsg');
+            const btn     = document.getElementById('saveBtn');
+
+            const missing = [];
+            if (!content) missing.push('Content');
+            if (!typeEl)  missing.push('Type');
+
+            document.getElementById('questionContent').classList.toggle('invalid', !content);
+
+            if (typeEl && CHOICE_TYPES.includes(typeEl.value)) {
+                const rows = document.querySelectorAll('#choicesContainer .choice-row');
+                const filled = Array.from(rows).filter(r => r.querySelector('.choice-text').value.trim()).length;
+                if (filled < 2) missing.push('At least 2 answer choices');
+            }
+
+            if (missing.length > 0) {
+                msg.textContent = 'Missing: ' + missing.join(', ');
+                msg.classList.remove('valid');
+                btn.disabled = true;
+            } else {
+                msg.textContent = '✅ Ready to save';
+                msg.classList.add('valid');
+                btn.disabled = false;
+            }
+        }
+
+        // ============================================================
+        // Save
+        // ============================================================
+        function saveQuestion() {
+            const author  = document.getElementById('questionAuthor').value.trim();
+            const id      = document.getElementById('questionID').value.trim();
+            const content = document.getElementById('questionContent').value.trim();
+            const typeEl  = document.querySelector('input[name="questionType"]:checked');
+            const qType   = typeEl ? typeEl.value : '';
+
+            if (!author || !id || !content || !qType) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+
+            // Detect if author changed (requires deleting old key & inserting new)
+            const authorChanged = savedAuthor && author !== savedAuthor;
+            const oldKeyPathValue = originalData ? originalData.keyPathValue : null;
+
+            const answerDesc = [], answerDescText = [], answerSort = [], explainArr = [], lockedArr = [];
+            if (CHOICE_TYPES.includes(qType)) {
+                document.querySelectorAll('#choicesContainer .choice-row').forEach(row => {
+                    const txt = row.querySelector('.choice-text').value.trim();
+                    if (!txt) return;
+                    answerDesc.push(txt);
+                    answerDescText.push(txt);
+                    answerSort.push(parseInt(row.querySelector('.choice-sort').value) || 1);
+                    explainArr.push(row.querySelector('.choice-explain').checked);
+                    lockedArr.push(row.querySelector('.choice-locked').checked);
+                });
+                if (answerDesc.length < 2) {
+                    alert('Please provide at least 2 answer choices.'); return;
+                }
+            }
+
+            const now = Date.now();
+            // Merge with original data to preserve any extra fields from legacy saves
+            const saveObject = Object.assign({}, originalData || {}, {
+                keyPathValue: ["questionStore", 1, author, 1, id],
+                questionAuthor: author,
+                questionID: id,
+                questionContent: content,
+                questionContentInnerText: content,
+                questionType: qType,
+                questionUnansweredComplete: document.getElementById('reqAnswerRequired').checked,
+                questionUnansweredRequiresExplanation: document.getElementById('reqExplainUnanswered').checked,
+                questionAnsweredRequiresExplanation: document.getElementById('reqExplainAnswered').checked,
+                questionAnswerDescription: answerDesc,
+                questionAnswerDescriptionInnerText: answerDescText,
+                questionAnswerSort: answerSort,
+                checkboxExplain: explainArr,
+                checkboxNoChange: lockedArr,
+                versionDateSince1969: now,
+                localTimeString: new Date().toString()
+            });
+
+            if (typeof createDualKeyPath === 'function') {
+                try { createDualKeyPath(saveObject); } catch(e) { console.warn("createDualKeyPath:", e); }
+            }
+
+            const database = "authorExcuTrust";
+            const req = indexedDB.open(database);
+            req.onsuccess = () => {
+                const db = req.result;
+                const tx = db.transaction('questionStore', 'readwrite');
+                const store = tx.objectStore('questionStore');
+
+                // If author changed, delete the old record first
+                if (authorChanged && oldKeyPathValue) {
+                    store.delete(oldKeyPathValue);
+                }
+
+                store.put(saveObject);
+                tx.oncomplete = () => {
+                    db.close();
+                    alert(`✅ Question updated!\n\nAuthor: ${author}\nID: ${id}${authorChanged ? '\n\n(Author changed from ' + savedAuthor + ' to ' + author + ')' : ''}`);
+                    window.location.href = 'ManageQuestions.html';
+                };
+                tx.onerror = (event) => {
+                    console.error("Save error:", event.target.error);
+                    alert("❌ Error saving: " + event.target.error);
+                    db.close();
+                };
+            };
+        }
+    </script>
+</body>
+</html>

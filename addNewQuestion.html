@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add New Question</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="design_system.css">
+    <link rel="stylesheet" href="modern_styles.css">
+    <link rel="stylesheet" href="help_system.css">
+    
+    <!-- jQuery -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/7.22.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.22.1/firebase-firestore.js"></script>
+
+    <!-- IndexedDB Setup -->
+    <script src="setupIndexedDB.js"></script>
+    <script src="GenerateRule.js"></script>
+    <script src="help_system.js"></script>
+    
+    <style>
+        .page-header {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border-radius: 8px;
+        }
+        .form-section {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .form-section h3 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #11998e;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.3rem;
+            color: #555;
+        }
+        .form-group label .required {
+            color: #dc3545;
+        }
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            border-color: #11998e;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(17, 153, 142, 0.2);
+        }
+        .form-group input.invalid,
+        .form-group textarea.invalid {
+            border-color: #dc3545;
+            box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.15);
+        }
+        .form-group .help-text {
+            font-size: 0.85rem;
+            color: #888;
+            margin-top: 0.25rem;
+        }
+        .nav-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        /* Question type grid */
+        .type-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 0.5rem;
+        }
+        .type-option {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #fafafa;
+        }
+        .type-option:hover {
+            border-color: #11998e;
+            background: #e7f9f0;
+        }
+        .type-option.selected {
+            border-color: #11998e;
+            background: #d1f2eb;
+            font-weight: 600;
+        }
+        .type-option input[type="radio"] {
+            width: auto;
+            margin: 0;
+        }
+        /* Choices section */
+        .choices-section {
+            display: none;
+        }
+        .choices-section.visible {
+            display: block;
+        }
+        .choice-row {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            padding: 0.5rem;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border: 1px solid #eee;
+        }
+        .choice-row .choice-num {
+            font-weight: 700;
+            color: #888;
+            min-width: 24px;
+            text-align: center;
+        }
+        .choice-row input[type="text"] {
+            flex: 1;
+            width: auto;
+        }
+        .choice-row input[type="number"] {
+            width: 70px;
+        }
+        .choice-row label {
+            font-weight: normal;
+            white-space: nowrap;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        .choice-row label input[type="checkbox"] {
+            width: auto;
+        }
+        .choice-row .remove-choice {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 26px;
+            height: 26px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .choice-row .remove-choice:hover {
+            background: #c82333;
+        }
+        /* Requirements checkboxes */
+        .requirements-grid {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .req-option {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .req-option input[type="checkbox"] {
+            width: auto;
+        }
+        /* Save bar */
+        .save-bar {
+            position: sticky;
+            bottom: 0;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-top: 2px solid #11998e;
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 8px 8px 0 0;
+            margin-top: 1rem;
+        }
+        .validation-message {
+            color: #dc3545;
+            font-weight: 600;
+        }
+        .validation-message.valid {
+            color: #28a745;
+        }
+        /* Author dropdown styling */
+        .form-group select.invalid {
+            border-color: #dc3545;
+            box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.15);
+        }
+    </style>
+</head>
+<body>
+    <div class="container" style="max-width: 900px; margin: 0 auto; padding: 2rem 2rem 0 2rem;">
+        
+        <a href="ManageQuestions.html" class="nav-back btn btn-outline-secondary">
+            ← Back to Manage Questions
+        </a>
+
+        <div class="page-header">
+            <h1 style="margin: 0 0 0.5rem 0;">➕ Add New Question</h1>
+            <p style="margin: 0; opacity: 0.9;">Define a new question with its type, content, and answer choices</p>
+        </div>
+
+        <!-- Identity -->
+        <div class="form-section">
+            <h3>📝 Question Identity</h3>
+            <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+                <div class="form-group" style="flex:1; min-width:200px;">
+                    <label>Author <span class="required">*</span></label>
+                    <select id="questionAuthor" onchange="validateForm();">
+                        <option value="">-- Select Author --</option>
+                    </select>
+                    <div class="help-text">Select an author from the list (manage authors on the Authors page)</div>
+                </div>
+                <div class="form-group" style="flex:2; min-width:250px;">
+                    <label>Question ID</label>
+                    <input type="text" id="questionID" readonly style="background:#e9ecef; color:#555;">
+                    <div class="help-text">Auto-generated unique identifier</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="form-section">
+            <h3>💬 Question Content</h3>
+            <div class="form-group">
+                <label>Question Text <span class="required">*</span></label>
+                <textarea id="questionContent" rows="3" placeholder="Type the question text here..." oninput="validateForm();"></textarea>
+                <div class="help-text">The actual question displayed to the user</div>
+            </div>
+        </div>
+
+        <!-- Type -->
+        <div class="form-section">
+            <h3>🔧 Question Type <span class="required">*</span></h3>
+            <div class="type-grid" id="typeGrid">
+                <!-- Multiple-choice types -->
+                <label class="type-option" data-type="questionTypeDiv_radio">
+                    <input type="radio" name="questionType" value="questionTypeDiv_radio"> 🔘 Radio Button
+                </label>
+                <label class="type-option" data-type="questionTypeDiv_checkbox">
+                    <input type="radio" name="questionType" value="questionTypeDiv_checkbox"> ☑️ Checkbox
+                </label>
+                <label class="type-option" data-type="questionTypeDiv_dropdown">
+                    <input type="radio" name="questionType" value="questionTypeDiv_dropdown"> 📋 Drop Down
+                </label>
+                <label class="type-option" data-type="questionTypeDiv_modal">
+                    <input type="radio" name="questionType" value="questionTypeDiv_modal"> 🪟 Modal
+                </label>
+                <!-- Input types -->
+                <label class="type-option" data-type="questionTypeDiv_text">
+                    <input type="radio" name="questionType" value="questionTypeDiv_text"> 📝 Text
+                </label>
+                <label class="type-option" data-type="questionTypeDiv_number">
+                    <input type="radio" name="questionType" value="questionTypeDiv_number"> 🔢 Number
+                </label>
+                <label class="type-option" data-type="questionTypeDiv_date">
+                    <input type="radio" name="questionType" value="questionTypeDiv_date"> 📅 Date
+                </label>
+                <label class="type-option" data-type="questionTypeDiv_datetime-local">
+                    <input type="radio" name="questionType" value="questionTypeDiv_datetime-local"> 🕐 Local Time
+                </label>
+                <label class="type-option" data-type="questionTypeDiv_email">
+                    <input type="radio" name="questionType" value="questionTypeDiv_email"> 📧 Email
+                </label>
+                <label class="type-option" data-type="questionTypeDiv_tel">
+                    <input type="radio" name="questionType" value="questionTypeDiv_tel"> 📞 Telephone
+                </label>
+                <label class="type-option" data-type="questionTypeDiv_url">
+                    <input type="radio" name="questionType" value="questionTypeDiv_url"> 🌐 URL
+                </label>
+                <label class="type-option" data-type="questionTypeDiv_file">
+                    <input type="radio" name="questionType" value="questionTypeDiv_file"> 📁 File
+                </label>
+                <label class="type-option" data-type="questionTypeDiv_password">
+                    <input type="radio" name="questionType" value="questionTypeDiv_password"> 🔒 Password
+                </label>
+                <label class="type-option" data-type="questionTypeDiv_month">
+                    <input type="radio" name="questionType" value="questionTypeDiv_month"> 📆 Month
+                </label>
+                <label class="type-option" data-type="questionTypeDiv_week">
+                    <input type="radio" name="questionType" value="questionTypeDiv_week"> 📅 Week
+                </label>
+                <label class="type-option" data-type="questionTypeDiv_na">
+                    <input type="radio" name="questionType" value="questionTypeDiv_na"> ℹ️ N/A (info only)
+                </label>
+                <label class="type-option" data-type="questionTypeDiv_naExplained">
+                    <input type="radio" name="questionType" value="questionTypeDiv_naExplained"> ❗ N/A (requires explanation)
+                </label>
+            </div>
+        </div>
+
+        <!-- Answer Choices (shown only for radio / checkbox / dropdown / modal) -->
+        <div class="form-section choices-section" id="choicesSection">
+            <h3>📋 Answer Choices</h3>
+            <p class="help-text" style="margin-bottom:1rem;">Add the answer options for this question. Drag or re-order using sort numbers.</p>
+
+            <div id="choicesContainer">
+                <!-- Choice rows will be added here dynamically -->
+            </div>
+
+            <button class="btn btn-primary" onclick="addChoice()" style="margin-top:0.5rem;">
+                ➕ Add Choice
+            </button>
+        </div>
+
+        <!-- Requirements -->
+        <div class="form-section">
+            <h3>⚙️ Requirements</h3>
+            <div class="requirements-grid">
+                <label class="req-option">
+                    <input type="checkbox" id="reqAnswerRequired"> Answer Required
+                </label>
+                <label class="req-option">
+                    <input type="checkbox" id="reqExplainUnanswered"> Explanation if Unanswered
+                </label>
+                <label class="req-option">
+                    <input type="checkbox" id="reqExplainAnswered"> Explanation if Answered
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save bar -->
+    <div class="save-bar">
+        <span class="validation-message" id="validationMsg">Fill in required fields to save</span>
+        <div style="display:flex; gap:0.5rem;">
+            <button class="btn btn-outline-secondary" onclick="window.location.href='ManageQuestions.html'">Cancel</button>
+            <button class="btn btn-primary" id="saveBtn" onclick="saveQuestion()" disabled>💾 Save Question</button>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // Types that show answer choices
+        // ============================================================
+        const CHOICE_TYPES = ['questionTypeDiv_radio', 'questionTypeDiv_checkbox', 'questionTypeDiv_dropdown', 'questionTypeDiv_modal'];
+        let choiceCounter = 0;
+        let generatedQuestionID = '';
+
+        // ============================================================
+        // Auto-generate unique Question ID
+        // ============================================================
+        function generateQuestionID() {
+            const timestamp = Date.now().toString(36).toUpperCase();
+            const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+            return `Q_${timestamp}_${random}`;
+        }
+
+        // ============================================================
+        // Load authors from authorMetadata store
+        // ============================================================
+        function loadAuthors() {
+            const database = "authorExcuTrust";
+            const req = indexedDB.open(database);
+            req.onsuccess = () => {
+                const db = req.result;
+                if (!db.objectStoreNames.contains('authorMetadata')) {
+                    db.close();
+                    console.warn('authorMetadata store not found');
+                    return;
+                }
+                const tx = db.transaction('authorMetadata', 'readonly');
+                const store = tx.objectStore('authorMetadata');
+                const getAll = store.getAll();
+                getAll.onsuccess = () => {
+                    const authors = getAll.result || [];
+                    const select = document.getElementById('questionAuthor');
+                    authors.sort((a, b) => (a.authorName || '').localeCompare(b.authorName || ''));
+                    authors.forEach(a => {
+                        const opt = document.createElement('option');
+                        opt.value = a.authorName;
+                        opt.textContent = a.authorName + (a.fullName ? ` (${a.fullName})` : '');
+                        select.appendChild(opt);
+                    });
+                    db.close();
+                };
+                getAll.onerror = () => db.close();
+            };
+            req.onerror = () => console.error('Error opening database for authors');
+        }
+
+        // ============================================================
+        // Initialize page
+        // ============================================================
+        (function initPage() {
+            // Auto-generate Question ID
+            generatedQuestionID = generateQuestionID();
+            document.getElementById('questionID').value = generatedQuestionID;
+            // Load authors dropdown
+            setTimeout(() => loadAuthors(), 300);
+        })();
+
+        // ============================================================
+        // Type selection
+        // ============================================================
+        document.querySelectorAll('#typeGrid .type-option').forEach(opt => {
+            opt.addEventListener('click', function() {
+                // highlight
+                document.querySelectorAll('#typeGrid .type-option').forEach(o => o.classList.remove('selected'));
+                this.classList.add('selected');
+                // show/hide choices
+                const val = this.querySelector('input').value;
+                const section = document.getElementById('choicesSection');
+                if (CHOICE_TYPES.includes(val)) {
+                    section.classList.add('visible');
+                    // Seed two empty choices if none
+                    if (document.querySelectorAll('#choicesContainer .choice-row').length === 0) {
+                        addChoice();
+                        addChoice();
+                    }
+                } else {
+                    section.classList.remove('visible');
+                }
+                validateForm();
+            });
+        });
+
+        // ============================================================
+        // Choices management
+        // ============================================================
+        function addChoice(text, sort, explain, locked) {
+            choiceCounter++;
+            const container = document.getElementById('choicesContainer');
+            const index = container.querySelectorAll('.choice-row').length + 1;
+
+            const row = document.createElement('div');
+            row.className = 'choice-row';
+            row.innerHTML = `
+                <span class="choice-num">${index}</span>
+                <input type="text" class="choice-text" placeholder="Answer description..." value="${text || ''}">
+                <input type="number" class="choice-sort" value="${sort != null ? sort : index}" min="1" title="Sort order" style="width:70px;">
+                <label title="Requires explanation when selected"><input type="checkbox" class="choice-explain" ${explain ? 'checked' : ''}> Explain</label>
+                <label title="Locked / cannot be changed"><input type="checkbox" class="choice-locked" ${locked ? 'checked' : ''}> Lock</label>
+                <button class="remove-choice" onclick="removeChoice(this)" title="Remove">×</button>
+            `;
+            container.appendChild(row);
+            renumberChoices();
+        }
+
+        function removeChoice(btn) {
+            btn.closest('.choice-row').remove();
+            renumberChoices();
+        }
+
+        function renumberChoices() {
+            document.querySelectorAll('#choicesContainer .choice-row').forEach((row, i) => {
+                row.querySelector('.choice-num').textContent = i + 1;
+            });
+        }
+
+        // ============================================================
+        // Validation
+        // ============================================================
+        function validateForm() {
+            const author  = document.getElementById('questionAuthor').value.trim();
+            const content = document.getElementById('questionContent').value.trim();
+            const typeEl  = document.querySelector('input[name="questionType"]:checked');
+            const msg     = document.getElementById('validationMsg');
+            const btn     = document.getElementById('saveBtn');
+
+            const missing = [];
+            if (!author)  missing.push('Author');
+            if (!content) missing.push('Content');
+            if (!typeEl)  missing.push('Type');
+
+            // Mark invalid
+            document.getElementById('questionAuthor').classList.toggle('invalid', !author);
+            document.getElementById('questionContent').classList.toggle('invalid', !content);
+
+            // If choice-type, validate at least 2 choices
+            if (typeEl && CHOICE_TYPES.includes(typeEl.value)) {
+                const rows = document.querySelectorAll('#choicesContainer .choice-row');
+                const filledCount = Array.from(rows).filter(r => r.querySelector('.choice-text').value.trim()).length;
+                if (filledCount < 2) {
+                    missing.push('At least 2 answer choices');
+                }
+            }
+
+            if (missing.length > 0) {
+                msg.textContent = 'Missing: ' + missing.join(', ');
+                msg.classList.remove('valid');
+                btn.disabled = true;
+            } else {
+                msg.textContent = '✅ Ready to save';
+                msg.classList.add('valid');
+                btn.disabled = false;
+            }
+        }
+
+        // ============================================================
+        // Save
+        // ============================================================
+        function saveQuestion() {
+            const author   = document.getElementById('questionAuthor').value.trim();
+            const id       = generatedQuestionID;
+            const content  = document.getElementById('questionContent').value.trim();
+            const typeEl   = document.querySelector('input[name="questionType"]:checked');
+            const qType    = typeEl ? typeEl.value : '';
+
+            if (!author || !id || !content || !qType) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+
+            // Build answer choice arrays
+            const answerDesc = [];
+            const answerDescText = [];
+            const answerSort = [];
+            const explainArr = [];
+            const lockedArr  = [];
+
+            if (CHOICE_TYPES.includes(qType)) {
+                const rows = document.querySelectorAll('#choicesContainer .choice-row');
+                rows.forEach(row => {
+                    const txt = row.querySelector('.choice-text').value.trim();
+                    if (!txt) return; // skip empty
+                    answerDesc.push(txt);
+                    answerDescText.push(txt);
+                    answerSort.push(parseInt(row.querySelector('.choice-sort').value) || 1);
+                    explainArr.push(row.querySelector('.choice-explain').checked);
+                    lockedArr.push(row.querySelector('.choice-locked').checked);
+                });
+
+                if (answerDesc.length < 2) {
+                    alert('Please provide at least 2 answer choices.');
+                    return;
+                }
+            }
+
+            const now = Date.now();
+            const saveObject = {
+                keyPathValue: ["questionStore", 1, author, 1, id],
+                questionAuthor: author,
+                questionID: id,
+                questionContent: content,
+                questionContentInnerText: content,
+                questionType: qType,
+                questionUnansweredComplete: document.getElementById('reqAnswerRequired').checked,
+                questionUnansweredRequiresExplanation: document.getElementById('reqExplainUnanswered').checked,
+                questionAnsweredRequiresExplanation: document.getElementById('reqExplainAnswered').checked,
+                questionAnswerDescription: answerDesc,
+                questionAnswerDescriptionInnerText: answerDescText,
+                questionAnswerSort: answerSort,
+                checkboxExplain: explainArr,
+                checkboxNoChange: lockedArr,
+                versionDateSince1969: now,
+                localTimeString: new Date().toString()
+            };
+
+            // Add dual keyPath if helper available
+            if (typeof createDualKeyPath === 'function') {
+                try { createDualKeyPath(saveObject); } catch(e) { console.warn("createDualKeyPath failed:", e); }
+            }
+
+            const database = "authorExcuTrust";
+            const req = indexedDB.open(database);
+            req.onsuccess = () => {
+                const db = req.result;
+                const tx = db.transaction('questionStore', 'readwrite');
+                const store = tx.objectStore('questionStore');
+                store.put(saveObject);
+
+                tx.oncomplete = () => {
+                    db.close();
+                    alert(`✅ Question saved!\n\nAuthor: ${author}\nID: ${id}\nType: ${qType.replace('questionTypeDiv_','')}`);
+                    window.location.href = 'ManageQuestions.html';
+                };
+                tx.onerror = (event) => {
+                    console.error("Save error:", event.target.error);
+                    alert("❌ Error saving question: " + event.target.error);
+                    db.close();
+                };
+            };
+            req.onerror = (event) => {
+                alert("❌ Error opening database: " + event.target.error);
+            };
+        }
+
+        // Initial validation state
+        validateForm();
+    </script>
+</body>
+</html>

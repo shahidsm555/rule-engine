@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Questions</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="design_system.css">
+    <link rel="stylesheet" href="modern_styles.css">
+    <link rel="stylesheet" href="help_system.css">
+    
+    <!-- jQuery -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/7.22.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.22.1/firebase-firestore.js"></script>
+
+    <!-- IndexedDB Setup -->
+    <script src="setupIndexedDB.js"></script>
+    <script src="GenerateRule.js"></script>
+    <script src="help_system.js"></script>
+    
+    <style>
+        .page-header {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border-radius: 8px;
+        }
+        .question-card {
+            border: 1px solid var(--border-color, #dee2e6);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        .question-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transform: translateY(-2px);
+        }
+        /* Question type color coding */
+        .question-card.type-radio       { border-left: 4px solid #007bff; }
+        .question-card.type-checkbox    { border-left: 4px solid #28a745; }
+        .question-card.type-text        { border-left: 4px solid #6c757d; }
+        .question-card.type-number      { border-left: 4px solid #fd7e14; }
+        .question-card.type-date        { border-left: 4px solid #e83e8c; }
+        .question-card.type-dropdown    { border-left: 4px solid #6610f2; }
+        .question-card.type-modal       { border-left: 4px solid #20c997; }
+        .question-card.type-email       { border-left: 4px solid #17a2b8; }
+        .question-card.type-tel         { border-left: 4px solid #ffc107; }
+        .question-card.type-url         { border-left: 4px solid #dc3545; }
+        .question-card.type-file        { border-left: 4px solid #795548; }
+        .question-card.type-password    { border-left: 4px solid #607d8b; }
+        .question-card.type-na          { border-left: 4px solid #9e9e9e; }
+        .question-card.type-naExplained { border-left: 4px solid #ff5722; }
+        .question-card.type-month       { border-left: 4px solid #8bc34a; }
+        .question-card.type-week        { border-left: 4px solid #00bcd4; }
+        .question-card.type-datetime-local { border-left: 4px solid #9c27b0; }
+        .question-card.type-unknown     { border-left: 4px solid #ccc; }
+
+        .question-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .question-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #333;
+        }
+        .question-meta {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+        .question-content {
+            color: #444;
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border-left: 3px solid #11998e;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .badge-type {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .badge-radio       { background: #d1ecf1; color: #0c5460; }
+        .badge-checkbox     { background: #d4edda; color: #155724; }
+        .badge-text         { background: #e2e3e5; color: #383d41; }
+        .badge-number       { background: #fff3cd; color: #856404; }
+        .badge-date         { background: #f8d7da; color: #721c24; }
+        .badge-dropdown     { background: #e8d5f5; color: #4a1a7a; }
+        .badge-modal        { background: #d1f2eb; color: #0c6b58; }
+        .badge-email        { background: #d1ecf1; color: #0c5460; }
+        .badge-na           { background: #e2e3e5; color: #383d41; }
+        .badge-other        { background: #f5f5f5; color: #666; }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin: 2rem 0;
+        }
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+        .filter-bar {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .nav-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .answer-list {
+            list-style: none;
+            padding: 0;
+            margin: 0.5rem 0 0 0;
+        }
+        .answer-list li {
+            padding: 0.25rem 0.5rem;
+            margin: 0.2rem 0;
+            background: #eef;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+        .answer-list li .sort-num {
+            color: #999;
+            font-size: 0.75rem;
+            margin-left: 0.5rem;
+        }
+        .requires-badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            margin-left: 0.5rem;
+        }
+        .requires-answer   { background: #fff3cd; color: #856404; }
+        .requires-explain   { background: #f8d7da; color: #721c24; }
+        .linked-rules-section {
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px dashed #ddd;
+        }
+        .linked-rule-badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            margin: 0.15rem;
+            border-radius: 10px;
+            font-size: 0.78rem;
+            background: #e7f3ff;
+            color: #004085;
+            cursor: pointer;
+        }
+        .linked-rule-badge:hover {
+            background: #b8daff;
+        }
+        .stats-bar {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .stat-chip {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.4rem 0.8rem;
+            border-radius: 16px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background: #f0f0f0;
+            color: #333;
+        }
+        /* View detail modal overlay */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-box {
+            background: white;
+            border-radius: 12px;
+            max-width: 700px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        .modal-box h2 { margin-top: 0; }
+        .modal-close {
+            float: right;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+        }
+        .modal-close:hover { color: #333; }
+        .detail-row {
+            display: flex;
+            margin-bottom: 0.75rem;
+        }
+        .detail-label {
+            font-weight: 600;
+            min-width: 160px;
+            color: #555;
+        }
+        .detail-value {
+            flex: 1;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 2rem;">
+        
+        <a href="index.html" class="nav-back btn btn-outline-secondary">
+            ← Back to Main Menu
+        </a>
+
+        <div class="page-header">
+            <h1 style="margin: 0 0 0.5rem 0;">❓ Manage Questions</h1>
+            <p style="margin: 0; opacity: 0.9;">Create, view, edit, and delete questions for your questionnaires</p>
+        </div>
+
+        <!-- Stats bar -->
+        <div class="stats-bar" id="statsBar">
+            <div class="stat-chip">📊 Total: <span id="statTotal">0</span></div>
+            <div class="stat-chip" style="background:#d1ecf1;">Radio: <span id="statRadio">0</span></div>
+            <div class="stat-chip" style="background:#d4edda;">Checkbox: <span id="statCheckbox">0</span></div>
+            <div class="stat-chip" style="background:#e8d5f5;">Dropdown: <span id="statDropdown">0</span></div>
+            <div class="stat-chip" style="background:#d1f2eb;">Modal: <span id="statModal">0</span></div>
+            <div class="stat-chip" style="background:#e2e3e5;">Other: <span id="statOther">0</span></div>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="filter-bar">
+            <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 250px;">
+                    <input type="text" id="searchInput" class="form-control" placeholder="🔍 Search by Author, ID, or Content..." oninput="filterQuestions()">
+                </div>
+                <div>
+                    <select id="typeFilter" class="form-control" onchange="filterQuestions()" style="min-width: 200px;">
+                        <option value="all">All Question Types</option>
+                        <option value="questionTypeDiv_radio">Radio Button</option>
+                        <option value="questionTypeDiv_checkbox">Checkbox</option>
+                        <option value="questionTypeDiv_dropdown">Drop Down</option>
+                        <option value="questionTypeDiv_modal">Modal</option>
+                        <option value="questionTypeDiv_text">Text</option>
+                        <option value="questionTypeDiv_number">Number</option>
+                        <option value="questionTypeDiv_date">Date</option>
+                        <option value="questionTypeDiv_datetime-local">Local Time</option>
+                        <option value="questionTypeDiv_email">Email</option>
+                        <option value="questionTypeDiv_tel">Telephone</option>
+                        <option value="questionTypeDiv_url">URL</option>
+                        <option value="questionTypeDiv_file">File</option>
+                        <option value="questionTypeDiv_password">Password</option>
+                        <option value="questionTypeDiv_month">Month</option>
+                        <option value="questionTypeDiv_week">Week</option>
+                        <option value="questionTypeDiv_na">N/A (info only)</option>
+                        <option value="questionTypeDiv_naExplained">N/A (requires explanation)</option>
+                    </select>
+                </div>
+                <div>
+                    <select id="authorFilter" class="form-control" onchange="filterQuestions()" style="min-width: 160px;">
+                        <option value="all">All Authors</option>
+                        <!-- populated dynamically -->
+                    </select>
+                </div>
+                <div>
+                    <button class="btn btn-primary" onclick="refreshList()">🔄 Refresh</button>
+                </div>
+            </div>
+            <small id="searchStatus" style="color: #666; display: block; margin-top: 0.5rem;">Ready to search...</small>
+        </div>
+
+        <!-- Action buttons -->
+        <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+            <button class="btn btn-danger" onclick="window.location.href='addNewQuestion.html'" style="flex: 1;">
+                ➕ New Question
+            </button>
+        </div>
+
+        <!-- Navigation links -->
+        <div style="display: flex; gap: 1rem; margin-bottom: 2rem; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
+            <button class="btn btn-outline-primary" onclick="window.location.href='ManageRules.html'" style="flex: 1;">
+                📋 Manage Rules
+            </button>
+            <button class="btn btn-outline-primary" onclick="window.location.href='ManageCollections.html'" style="flex: 1;">
+                📦 Manage Collections
+            </button>
+            <button class="btn btn-outline-secondary" onclick="window.location.href='ManageAuthors.html'" style="flex: 1;">
+                👤 Manage Authors
+            </button>
+        </div>
+
+        <!-- Questions container -->
+        <div id="questionsContainer">
+            <!-- Questions will be loaded here -->
+        </div>
+
+        <!-- Empty state -->
+        <div id="emptyState" class="empty-state hidealways">
+            <div class="empty-state-icon">📭</div>
+            <h3>No Questions Found</h3>
+            <p style="color: #666; margin-bottom: 1.5rem;">Your database has no questions yet. Create some to get started.</p>
+            
+            <div style="display: flex; gap: 1rem; justify-content: center; margin-bottom: 1.5rem;">
+                <button class="btn btn-lg" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; padding: 1rem 2rem; font-size: 1.1rem; font-weight: bold;" onclick="createSampleQuestions()">
+                    📦 Load Sample Questions
+                </button>
+                <button class="btn btn-lg btn-outline-danger" style="padding: 1rem 2rem; font-size: 1.1rem; font-weight: bold;" onclick="clearAllQuestions()">
+                    🗑️ Clear All Questions
+                </button>
+            </div>
+            
+            <p style="color: #999; font-size: 0.9rem;">Sample data includes questions of various types with answer options</p>
+            
+            <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #ddd;">
+                <p style="color: #666; margin-bottom: 1rem;">Or create your own:</p>
+                <button class="btn btn-primary" onclick="window.location.href='addNewQuestion.html'">Create New Question</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- View detail modal -->
+    <div class="modal-overlay" id="viewModal">
+        <div class="modal-box">
+            <button class="modal-close" onclick="closeViewModal()">&times;</button>
+            <div id="viewModalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // State
+        // ============================================================
+        let allQuestions = [];
+        let linkedRulesMap = {};   // questionKey string -> array of rule objects
+
+        // ============================================================
+        // Question type display helpers
+        // ============================================================
+        const TYPE_LABELS = {
+            'questionTypeDiv_radio':          'Radio Button',
+            'questionTypeDiv_checkbox':       'Checkbox',
+            'questionTypeDiv_dropdown':       'Drop Down',
+            'questionTypeDiv_modal':          'Modal',
+            'questionTypeDiv_text':           'Text',
+            'questionTypeDiv_number':         'Number',
+            'questionTypeDiv_date':           'Date',
+            'questionTypeDiv_datetime-local': 'Local Time',
+            'questionTypeDiv_email':          'Email',
+            'questionTypeDiv_tel':            'Telephone',
+            'questionTypeDiv_url':            'URL',
+            'questionTypeDiv_file':           'File',
+            'questionTypeDiv_password':       'Password',
+            'questionTypeDiv_month':          'Month',
+            'questionTypeDiv_week':           'Week',
+            'questionTypeDiv_na':             'N/A (info only)',
+            'questionTypeDiv_naExplained':    'N/A (requires explanation)'
+        };
+
+        function typeLabel(typeId) {
+            return TYPE_LABELS[typeId] || typeId || 'Unknown';
+        }
+
+        /** Return a short CSS class suffix for the type, e.g. "radio", "checkbox" */
+        function typeCssClass(typeId) {
+            if (!typeId) return 'unknown';
+            const short = typeId.replace('questionTypeDiv_', '');
+            return short || 'unknown';
+        }
+
+        /** Badge class for a question type */
+        function badgeClassForType(typeId) {
+            const map = {
+                'questionTypeDiv_radio':     'badge-radio',
+                'questionTypeDiv_checkbox':  'badge-checkbox',
+                'questionTypeDiv_dropdown':  'badge-dropdown',
+                'questionTypeDiv_modal':     'badge-modal',
+                'questionTypeDiv_text':      'badge-text',
+                'questionTypeDiv_number':    'badge-number',
+                'questionTypeDiv_date':      'badge-date',
+                'questionTypeDiv_email':     'badge-email',
+                'questionTypeDiv_na':        'badge-na'
+            };
+            return map[typeId] || 'badge-other';
+        }
+
+        /** True if the type uses answer choices */
+        function typeHasChoices(typeId) {
+            return ['questionTypeDiv_radio', 'questionTypeDiv_modal', 'questionTypeDiv_dropdown', 'questionTypeDiv_checkbox'].includes(typeId);
+        }
+
+        // ============================================================
+        // Initialisation
+        // ============================================================
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("ManageQuestions.html loaded, initializing...");
+            setTimeout(() => {
+                loadAllQuestions();
+            }, 500);
+        });
+
+        // ============================================================
+        // Load all questions (and linked rules)
+        // ============================================================
+        function loadAllQuestions() {
+            console.log("=== LOADING ALL QUESTIONS ===");
+            const database = "authorExcuTrust";
+
+            if (!window.indexedDB) {
+                showEmptyState("Your browser doesn't support IndexedDB");
+                return;
+            }
+
+            const req = indexedDB.open(database);
+
+            req.onerror = (event) => {
+                console.error("Database open error:", event.target.error);
+                showEmptyState("Error loading database: " + event.target.error);
+            };
+
+            req.onsuccess = () => {
+                const db = req.result;
+                console.log("Database opened. Stores:", Array.from(db.objectStoreNames));
+
+                if (!db.objectStoreNames.contains('questionStore')) {
+                    showEmptyState("questionStore does not exist yet. Please refresh.");
+                    db.close();
+                    return;
+                }
+
+                // We need both questionStore and ruleStore (for linked rules)
+                const storeNames = ['questionStore'];
+                if (db.objectStoreNames.contains('ruleStore')) {
+                    storeNames.push('ruleStore');
+                }
+
+                const tx = db.transaction(storeNames, 'readonly');
+
+                // 1) Load questions
+                const qStore = tx.objectStore('questionStore');
+                const qReq = qStore.getAll();
+
+                // 2) Load rules (to build the linkedRulesMap)
+                let rulesData = [];
+                if (storeNames.includes('ruleStore')) {
+                    const rStore = tx.objectStore('ruleStore');
+                    const rReq = rStore.getAll();
+                    rReq.onsuccess = () => { rulesData = rReq.result || []; };
+                }
+
+                qReq.onsuccess = () => {
+                    allQuestions = (qReq.result || []).filter(q =>
+                        q.keyPathValue && q.keyPathValue[0] === 'questionStore'
+                    );
+                    console.log(`Loaded ${allQuestions.length} questions`);
+
+                    // Build linked rules map (only display rules that reference a question)
+                    linkedRulesMap = {};
+                    rulesData
+                        .filter(r => r.keyPathValue && r.keyPathValue[0] === 'trueruleStore')
+                        .forEach(rule => {
+                            const qKey = (rule.questionSource || []).join('|');
+                            if (!qKey) return;
+                            if (!linkedRulesMap[qKey]) linkedRulesMap[qKey] = [];
+                            linkedRulesMap[qKey].push(rule);
+                        });
+                    console.log("Built linkedRulesMap for", Object.keys(linkedRulesMap).length, "questions");
+
+                    populateAuthorFilter();
+                    updateStats(allQuestions);
+                    displayQuestions(allQuestions);
+                    db.close();
+                };
+
+                qReq.onerror = (event) => {
+                    console.error("Error getting questions:", event.target.error);
+                    showEmptyState("Error loading questions.");
+                    db.close();
+                };
+            };
+        }
+
+        // ============================================================
+        // Stats
+        // ============================================================
+        function updateStats(questions) {
+            let radio=0, checkbox=0, dropdown=0, modal=0, other=0;
+            questions.forEach(q => {
+                switch(q.questionType) {
+                    case 'questionTypeDiv_radio':    radio++;    break;
+                    case 'questionTypeDiv_checkbox': checkbox++; break;
+                    case 'questionTypeDiv_dropdown': dropdown++; break;
+                    case 'questionTypeDiv_modal':    modal++;    break;
+                    default: other++;
+                }
+            });
+            document.getElementById('statTotal').textContent    = questions.length;
+            document.getElementById('statRadio').textContent    = radio;
+            document.getElementById('statCheckbox').textContent = checkbox;
+            document.getElementById('statDropdown').textContent = dropdown;
+            document.getElementById('statModal').textContent    = modal;
+            document.getElementById('statOther').textContent    = other;
+        }
+
+        // ============================================================
+        // Author filter dropdown
+        // ============================================================
+        function populateAuthorFilter() {
+            const sel = document.getElementById('authorFilter');
+            const authors = [...new Set(allQuestions.map(q => q.questionAuthor || q.keyPathValue[2]).filter(Boolean))].sort();
+            // keep "All Authors" option, remove old dynamic ones
+            while (sel.options.length > 1) sel.remove(1);
+            authors.forEach(a => {
+                const opt = document.createElement('option');
+                opt.value = a;
+                opt.textContent = a;
+                sel.appendChild(opt);
+            });
+        }
+
+        // ============================================================
+        // Display
+        // ============================================================
+        function displayQuestions(questions) {
+            const container = document.getElementById('questionsContainer');
+            const emptyState = document.getElementById('emptyState');
+            container.innerHTML = '';
+
+            if (!questions || questions.length === 0) {
+                emptyState.classList.remove('hidealways');
+                return;
+            }
+            emptyState.classList.add('hidealways');
+
+            // Summary
+            const authors = [...new Set(questions.map(q => q.questionAuthor || q.keyPathValue[2]))];
+            const summary = document.createElement('div');
+            summary.style.cssText = 'background:#e7f9f0; padding:1rem; border-radius:8px; margin-bottom:1rem;';
+            summary.innerHTML = `
+                <strong>📊 Summary:</strong> ${questions.length} question(s) found |
+                <strong>Authors:</strong> ${authors.join(', ')}
+            `;
+            container.appendChild(summary);
+
+            questions.forEach(q => container.appendChild(createQuestionCard(q)));
+        }
+
+        // ============================================================
+        // Card
+        // ============================================================
+        function createQuestionCard(q) {
+            const div = document.createElement('div');
+            const qType = q.questionType || 'unknown';
+            div.className = `question-card type-${typeCssClass(qType)}`;
+
+            const author  = q.questionAuthor || q.keyPathValue[2] || 'Unknown';
+            const id      = q.questionID     || q.keyPathValue[4] || 'Unknown';
+            const content = q.questionContentInnerText || q.questionContent || 'No content';
+            const badge   = badgeClassForType(qType);
+
+            // Requirements badges
+            let reqBadges = '';
+            if (q.questionUnansweredComplete) {
+                reqBadges += '<span class="requires-badge requires-answer">Answer Required</span>';
+            }
+            if (q.questionUnansweredRequiresExplanation) {
+                reqBadges += '<span class="requires-badge requires-explain">Explanation if Unanswered</span>';
+            }
+            if (q.questionAnsweredRequiresExplanation) {
+                reqBadges += '<span class="requires-badge requires-explain">Explanation if Answered</span>';
+            }
+
+            // Answer choices (if radio / checkbox / dropdown / modal)
+            let choicesHTML = '';
+            if (typeHasChoices(qType) && q.questionAnswerDescription && q.questionAnswerDescription.length > 0) {
+                const items = q.questionAnswerDescription.map((desc, i) => {
+                    const sort = (q.questionAnswerSort && q.questionAnswerSort[i] != null) ? `<span class="sort-num">(sort: ${q.questionAnswerSort[i]})</span>` : '';
+                    const explainTag = (q.checkboxExplain && q.checkboxExplain[i]) ? ' <span class="requires-badge requires-explain" style="font-size:0.7rem;">explain</span>' : '';
+                    const lockTag    = (q.checkboxNoChange && q.checkboxNoChange[i]) ? ' <span class="requires-badge" style="background:#e2e3e5;color:#383d41;font-size:0.7rem;">locked</span>' : '';
+                    const text = q.questionAnswerDescriptionInnerText ? q.questionAnswerDescriptionInnerText[i] : desc;
+                    return `<li>${text}${sort}${explainTag}${lockTag}</li>`;
+                }).join('');
+                choicesHTML = `<div style="margin-top:0.5rem;"><strong>Answer Choices (${q.questionAnswerDescription.length}):</strong><ul class="answer-list">${items}</ul></div>`;
+            }
+
+            // Linked rules
+            const qKey = (q.keyPathValue || []).join('|');
+            const linked = linkedRulesMap[qKey] || [];
+            let linkedHTML = '';
+            if (linked.length > 0) {
+                const badges = linked.map(r => {
+                    const rId = r.ruleID || r.keyPathValue[4] || '?';
+                    const rAuthor = r.ruleAuthor || r.keyPathValue[2] || '?';
+                    return `<span class="linked-rule-badge" title="${r.ruleContent || ''}" onclick="window.location.href='editRule.html?action=view&id=${encodeURIComponent(rId)}'">📋 ${rAuthor} / ${rId}</span>`;
+                }).join('');
+                linkedHTML = `<div class="linked-rules-section"><strong>Linked Display Rules (${linked.length}):</strong><div>${badges}</div></div>`;
+            }
+
+            // Escape keyPathValue for onclick
+            const kpvJSON = JSON.stringify(q.keyPathValue);
+
+            div.innerHTML = `
+                <div class="question-header">
+                    <span class="badge-type ${badge}">${typeLabel(qType)}</span>
+                    <div class="action-buttons">
+                        <button class="btn btn-sm btn-outline-primary" onclick='editQuestion(${kpvJSON})'>
+                            ✏️ Edit
+                        </button>
+                        <button class="btn btn-sm btn-outline-success" onclick='viewQuestion(${kpvJSON})'>
+                            👁️ View
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick='deleteQuestion(${kpvJSON})'>
+                            🗑️ Delete
+                        </button>
+                    </div>
+                </div>
+                <div class="question-title">${id} ${reqBadges}</div>
+                <div class="question-content">${content}</div>
+                <div class="question-meta">
+                    👤 Author: <strong>${author}</strong> | 🆔 ID: <strong>${id}</strong>
+                </div>
+                ${choicesHTML}
+                ${linkedHTML}
+                <div class="question-meta" style="font-size: 0.8rem; color: #999; margin-top:0.5rem;">
+                    Last modified: ${q.localTimeString || (q.versionDateSince1969 ? new Date(q.versionDateSince1969).toLocaleString() : 'Unknown')}
+                </div>
+            `;
+            return div;
+        }
+
+        // ============================================================
+        // Filter
+        // ============================================================
+        function filterQuestions() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const typeFilter = document.getElementById('typeFilter').value;
+            const authorFilter = document.getElementById('authorFilter').value;
+            const status = document.getElementById('searchStatus');
+
+            let filtered = allQuestions.filter(q => {
+                // Type
+                if (typeFilter !== 'all' && q.questionType !== typeFilter) return false;
+                // Author
+                const author = q.questionAuthor || q.keyPathValue[2] || '';
+                if (authorFilter !== 'all' && author !== authorFilter) return false;
+                // Search
+                if (search) {
+                    const id      = (q.questionID || q.keyPathValue[4] || '').toLowerCase();
+                    const content = (q.questionContentInnerText || q.questionContent || '').toLowerCase();
+                    const a       = author.toLowerCase();
+                    if (!a.includes(search) && !id.includes(search) && !content.includes(search)) return false;
+                }
+                return true;
+            });
+
+            if (search || typeFilter !== 'all' || authorFilter !== 'all') {
+                status.textContent = `Found ${filtered.length} of ${allQuestions.length} questions`;
+                status.style.color = filtered.length > 0 ? '#28a745' : '#dc3545';
+            } else {
+                status.textContent = `Showing all ${allQuestions.length} questions`;
+                status.style.color = '#666';
+            }
+
+            updateStats(filtered);
+            displayQuestions(filtered);
+        }
+
+        function refreshList() {
+            loadAllQuestions();
+        }
+
+        function showEmptyState(msg) {
+            document.getElementById('emptyState').classList.remove('hidealways');
+            document.getElementById('questionsContainer').innerHTML = '';
+            if (msg) {
+                document.getElementById('emptyState').querySelector('p').textContent = msg;
+            }
+        }
+
+        // ============================================================
+        // CRUD — View
+        // ============================================================
+        function viewQuestion(keyPathValue) {
+            const database = "authorExcuTrust";
+            const req = indexedDB.open(database);
+            req.onsuccess = () => {
+                const db = req.result;
+                const tx = db.transaction('questionStore', 'readonly');
+                const store = tx.objectStore('questionStore');
+                const getReq = store.get(keyPathValue);
+                getReq.onsuccess = () => {
+                    const q = getReq.result;
+                    db.close();
+                    if (!q) { alert('Question not found.'); return; }
+                    showViewModal(q);
+                };
+                getReq.onerror = () => { db.close(); alert('Error loading question.'); };
+            };
+        }
+
+        function showViewModal(q) {
+            const container = document.getElementById('viewModalContent');
+            const author  = q.questionAuthor || q.keyPathValue[2] || '';
+            const id      = q.questionID     || q.keyPathValue[4] || '';
+            const content = q.questionContent || '';
+            const qType   = q.questionType || 'Unknown';
+
+            let choicesHTML = '';
+            if (typeHasChoices(qType) && q.questionAnswerDescription && q.questionAnswerDescription.length) {
+                choicesHTML = '<h4 style="margin-top:1rem;">Answer Choices</h4><table style="width:100%;border-collapse:collapse;">';
+                choicesHTML += '<tr style="background:#f0f0f0;"><th style="padding:0.4rem;text-align:left;">#</th><th style="padding:0.4rem;text-align:left;">Description</th><th style="padding:0.4rem;text-align:left;">Sort</th><th style="padding:0.4rem;text-align:left;">Explain?</th><th style="padding:0.4rem;text-align:left;">Locked?</th></tr>';
+                q.questionAnswerDescription.forEach((desc, i) => {
+                    const txt   = q.questionAnswerDescriptionInnerText ? q.questionAnswerDescriptionInnerText[i] : desc;
+                    const sort  = q.questionAnswerSort ? q.questionAnswerSort[i] : '-';
+                    const expl  = q.checkboxExplain && q.checkboxExplain[i] ? '✅' : '';
+                    const lock  = q.checkboxNoChange && q.checkboxNoChange[i] ? '🔒' : '';
+                    choicesHTML += `<tr style="border-bottom:1px solid #eee;"><td style="padding:0.4rem;">${i+1}</td><td style="padding:0.4rem;">${txt}</td><td style="padding:0.4rem;">${sort}</td><td style="padding:0.4rem;">${expl}</td><td style="padding:0.4rem;">${lock}</td></tr>`;
+                });
+                choicesHTML += '</table>';
+            }
+
+            // Linked rules
+            const qKey = (q.keyPathValue || []).join('|');
+            const linked = linkedRulesMap[qKey] || [];
+            let linkedHTML = '';
+            if (linked.length > 0) {
+                linkedHTML = '<h4 style="margin-top:1rem;">Linked Display Rules</h4><ul>';
+                linked.forEach(r => {
+                    linkedHTML += `<li><strong>${r.ruleAuthor || '?'} / ${r.ruleID || '?'}</strong> — ${r.ruleContent || ''}</li>`;
+                });
+                linkedHTML += '</ul>';
+            }
+
+            container.innerHTML = `
+                <h2 style="color:#11998e;">❓ Question Detail</h2>
+                <hr>
+                <div class="detail-row"><div class="detail-label">Author</div><div class="detail-value">${author}</div></div>
+                <div class="detail-row"><div class="detail-label">Question ID</div><div class="detail-value">${id}</div></div>
+                <div class="detail-row"><div class="detail-label">Type</div><div class="detail-value"><span class="badge-type ${badgeClassForType(qType)}">${typeLabel(qType)}</span></div></div>
+                <div class="detail-row"><div class="detail-label">Content</div><div class="detail-value">${content}</div></div>
+                <div class="detail-row"><div class="detail-label">Answer Required</div><div class="detail-value">${q.questionUnansweredComplete ? '✅ Yes' : 'No'}</div></div>
+                <div class="detail-row"><div class="detail-label">Explain if Unanswered</div><div class="detail-value">${q.questionUnansweredRequiresExplanation ? '✅ Yes' : 'No'}</div></div>
+                <div class="detail-row"><div class="detail-label">Explain if Answered</div><div class="detail-value">${q.questionAnsweredRequiresExplanation ? '✅ Yes' : 'No'}</div></div>
+                <div class="detail-row"><div class="detail-label">Last Modified</div><div class="detail-value">${q.localTimeString || (q.versionDateSince1969 ? new Date(q.versionDateSince1969).toLocaleString() : 'Unknown')}</div></div>
+                ${choicesHTML}
+                ${linkedHTML}
+            `;
+            document.getElementById('viewModal').classList.add('active');
+        }
+
+        function closeViewModal() {
+            document.getElementById('viewModal').classList.remove('active');
+        }
+
+        // Close modal on backdrop click
+        document.addEventListener('click', function(e) {
+            if (e.target.id === 'viewModal') closeViewModal();
+        });
+
+        // Close on Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeViewModal();
+        });
+
+        // ============================================================
+        // CRUD — Edit
+        // ============================================================
+        function editQuestion(keyPathValue) {
+            const id     = keyPathValue[4];
+            window.location.href = `editQuestion.html?id=${encodeURIComponent(id)}`;
+        }
+
+        // ============================================================
+        // CRUD — Delete
+        // ============================================================
+        function deleteQuestion(keyPathValue) {
+            const author = keyPathValue[2];
+            const id     = keyPathValue[4];
+
+            // Check linked rules
+            const qKey = keyPathValue.join('|');
+            const linked = linkedRulesMap[qKey] || [];
+            let warning = '';
+            if (linked.length > 0) {
+                warning = `\n\n⚠️ WARNING: ${linked.length} display rule(s) reference this question!\nDeleting it may break those rules.`;
+            }
+
+            if (!confirm(`Are you sure you want to delete this question?\n\nAuthor: ${author}\nID: ${id}${warning}`)) {
+                return;
+            }
+
+            const database = "authorExcuTrust";
+            const req = indexedDB.open(database);
+            req.onsuccess = () => {
+                const db = req.result;
+                const tx = db.transaction('questionStore', 'readwrite');
+                const store = tx.objectStore('questionStore');
+                const delReq = store.delete(keyPathValue);
+
+                delReq.onsuccess = () => {
+                    console.log("Question deleted:", keyPathValue);
+                    alert("✅ Question deleted successfully!");
+                    loadAllQuestions();
+                };
+                delReq.onerror = (event) => {
+                    console.error("Delete error:", event.target.error);
+                    alert("❌ Error deleting question.");
+                };
+                tx.oncomplete = () => db.close();
+            };
+        }
+
+        // ============================================================
+        // Clear all questions
+        // ============================================================
+        function clearAllQuestions() {
+            if (!confirm("⚠️ WARNING: This will delete ALL questions from the database!\n\nAre you sure you want to continue?")) {
+                return;
+            }
+            const database = "authorExcuTrust";
+            const req = indexedDB.open(database);
+            req.onsuccess = () => {
+                const db = req.result;
+                const tx = db.transaction('questionStore', 'readwrite');
+                tx.objectStore('questionStore').clear().onsuccess = () => {
+                    alert("✅ All questions cleared!");
+                    loadAllQuestions();
+                };
+                tx.oncomplete = () => db.close();
+            };
+        }
+
+        // ============================================================
+        // Sample question data
+        // ============================================================
+        function createSampleQuestions() {
+            console.log("Creating sample questions...");
+
+            // Auto-generate unique IDs (same format as addNewQuestion.html)
+            function genQID(index) {
+                const base = Date.now().toString(36).toUpperCase();
+                const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
+                return `Q_${base}_${rand}${index}`;
+            }
+
+            const samples = [
+                {
+                    author: "JSM", id: genQID(1),
+                    content: "What is the applicant's age?",
+                    type: "questionTypeDiv_number",
+                    answers: [], answerSort: [],
+                    unansweredComplete: true, unansweredExplain: false, answeredExplain: false,
+                    checkboxExplain: [], checkboxNoChange: []
+                },
+                {
+                    author: "JSM", id: genQID(2),
+                    content: "What is the applicant's current employment status?",
+                    type: "questionTypeDiv_radio",
+                    answers: ["Full-time employed", "Part-time employed", "Self-employed", "Unemployed", "Retired", "Student"],
+                    answerSort: [1, 2, 3, 4, 5, 6],
+                    unansweredComplete: true, unansweredExplain: true, answeredExplain: false,
+                    checkboxExplain: [false, false, true, true, false, false],
+                    checkboxNoChange: [false, false, false, false, false, false]
+                },
+                {
+                    author: "JSM", id: genQID(3),
+                    content: "What is the applicant's annual income range?",
+                    type: "questionTypeDiv_dropdown",
+                    answers: ["Under $25,000", "$25,000 - $49,999", "$50,000 - $74,999", "$75,000 - $99,999", "$100,000 - $149,999", "$150,000+"],
+                    answerSort: [1, 2, 3, 4, 5, 6],
+                    unansweredComplete: true, unansweredExplain: false, answeredExplain: false,
+                    checkboxExplain: [false, false, false, false, false, false],
+                    checkboxNoChange: [false, false, false, false, false, false]
+                },
+                {
+                    author: "AMK", id: genQID(4),
+                    content: "What type of property is being considered?",
+                    type: "questionTypeDiv_radio",
+                    answers: ["Single Family Home", "Condominium", "Townhouse", "Multi-family (2-4 units)", "Commercial", "Land / Lot"],
+                    answerSort: [1, 2, 3, 4, 5, 6],
+                    unansweredComplete: true, unansweredExplain: false, answeredExplain: false,
+                    checkboxExplain: [false, false, false, false, true, true],
+                    checkboxNoChange: [false, false, false, false, false, false]
+                },
+                {
+                    author: "AMK", id: genQID(5),
+                    content: "Which types of insurance does the applicant currently have? (select all that apply)",
+                    type: "questionTypeDiv_checkbox",
+                    answers: ["Health Insurance", "Life Insurance", "Auto Insurance", "Homeowner's Insurance", "Disability Insurance", "None"],
+                    answerSort: [1, 2, 3, 4, 5, 6],
+                    unansweredComplete: false, unansweredExplain: false, answeredExplain: false,
+                    checkboxExplain: [false, false, false, false, false, true],
+                    checkboxNoChange: [false, false, false, false, false, false]
+                },
+                {
+                    author: "RJP", id: genQID(6),
+                    content: "What is the applicant's date of birth?",
+                    type: "questionTypeDiv_date",
+                    answers: [], answerSort: [],
+                    unansweredComplete: true, unansweredExplain: false, answeredExplain: false,
+                    checkboxExplain: [], checkboxNoChange: []
+                },
+                {
+                    author: "RJP", id: genQID(7),
+                    content: "What is the applicant's email address?",
+                    type: "questionTypeDiv_email",
+                    answers: [], answerSort: [],
+                    unansweredComplete: true, unansweredExplain: false, answeredExplain: false,
+                    checkboxExplain: [], checkboxNoChange: []
+                },
+                {
+                    author: "EMW", id: genQID(8),
+                    content: "What is the applicant's phone number?",
+                    type: "questionTypeDiv_tel",
+                    answers: [], answerSort: [],
+                    unansweredComplete: false, unansweredExplain: false, answeredExplain: false,
+                    checkboxExplain: [], checkboxNoChange: []
+                },
+                {
+                    author: "EMW", id: genQID(9),
+                    content: "Select the applicant's credit score range",
+                    type: "questionTypeDiv_modal",
+                    answers: ["300-499 (Poor)", "500-579 (Very Poor)", "580-619 (Fair)", "620-679 (Average)", "680-719 (Good)", "720-779 (Very Good)", "780-850 (Excellent)"],
+                    answerSort: [1, 2, 3, 4, 5, 6, 7],
+                    unansweredComplete: true, unansweredExplain: false, answeredExplain: false,
+                    checkboxExplain: [false, false, false, false, false, false, false],
+                    checkboxNoChange: [false, false, false, false, false, false, false]
+                },
+                {
+                    author: "DLH", id: genQID(10),
+                    content: "Provide any additional notes or comments about this application",
+                    type: "questionTypeDiv_text",
+                    answers: [], answerSort: [],
+                    unansweredComplete: false, unansweredExplain: false, answeredExplain: false,
+                    checkboxExplain: [], checkboxNoChange: []
+                },
+                {
+                    author: "DLH", id: genQID(11),
+                    content: "Upload supporting documents for this application",
+                    type: "questionTypeDiv_file",
+                    answers: [], answerSort: [],
+                    unansweredComplete: false, unansweredExplain: false, answeredExplain: false,
+                    checkboxExplain: [], checkboxNoChange: []
+                },
+                {
+                    author: "STC", id: genQID(12),
+                    content: "This section is for informational purposes only. No response is required. The applicant should review the attached disclosure documents before proceeding.",
+                    type: "questionTypeDiv_na",
+                    answers: [], answerSort: [],
+                    unansweredComplete: false, unansweredExplain: false, answeredExplain: false,
+                    checkboxExplain: [], checkboxNoChange: []
+                },
+                {
+                    author: "STC", id: genQID(13),
+                    content: "Has the applicant acknowledged the associated risks? If not applicable, please explain why.",
+                    type: "questionTypeDiv_naExplained",
+                    answers: [], answerSort: [],
+                    unansweredComplete: false, unansweredExplain: true, answeredExplain: false,
+                    checkboxExplain: [], checkboxNoChange: []
+                },
+                {
+                    author: "MRB", id: genQID(14),
+                    content: "What is the applicant's preferred method of contact?",
+                    type: "questionTypeDiv_radio",
+                    answers: ["Email", "Phone", "Text/SMS", "Mail"],
+                    answerSort: [1, 2, 3, 4],
+                    unansweredComplete: false, unansweredExplain: false, answeredExplain: false,
+                    checkboxExplain: [false, false, false, false],
+                    checkboxNoChange: [false, false, false, false]
+                },
+                {
+                    author: "MRB", id: genQID(15),
+                    content: "Enter the applicant's website or portfolio URL (if applicable)",
+                    type: "questionTypeDiv_url",
+                    answers: [], answerSort: [],
+                    unansweredComplete: false, unansweredExplain: false, answeredExplain: false,
+                    checkboxExplain: [], checkboxNoChange: []
+                }
+            ];
+
+            const database = "authorExcuTrust";
+            const req = indexedDB.open(database);
+            req.onsuccess = () => {
+                const db = req.result;
+                if (!db.objectStoreNames.contains('questionStore')) {
+                    alert("❌ questionStore not found. Refresh the page.");
+                    db.close();
+                    return;
+                }
+                const tx = db.transaction('questionStore', 'readwrite');
+                const store = tx.objectStore('questionStore');
+
+                samples.forEach(s => {
+                    const now = Date.now();
+                    const obj = {
+                        keyPathValue: ["questionStore", 1, s.author, 1, s.id],
+                        questionAuthor: s.author,
+                        questionID: s.id,
+                        questionContent: s.content,
+                        questionContentInnerText: s.content,
+                        questionType: s.type,
+                        questionUnansweredComplete: s.unansweredComplete,
+                        questionUnansweredRequiresExplanation: s.unansweredExplain,
+                        questionAnsweredRequiresExplanation: s.answeredExplain,
+                        questionAnswerDescription: s.answers,
+                        questionAnswerDescriptionInnerText: s.answers,
+                        questionAnswerSort: s.answerSort,
+                        checkboxExplain: s.checkboxExplain,
+                        checkboxNoChange: s.checkboxNoChange,
+                        versionDateSince1969: now,
+                        localTimeString: new Date().toString()
+                    };
+                    store.put(obj);
+                });
+
+                tx.oncomplete = () => {
+                    db.close();
+                    alert(`✅ Created ${samples.length} sample questions!\n\nTypes included: Radio, Checkbox, Dropdown, Modal, Number, Date, Email, Telephone, Text, File, URL, N/A, N/A Explained`);
+                    loadAllQuestions();
+                };
+                tx.onerror = (event) => {
+                    console.error("Error creating sample questions:", event.target.error);
+                    alert("❌ Error creating sample questions.");
+                    db.close();
+                };
+            };
+        }
+    </script>
+</body>
+</html>

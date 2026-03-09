@@ -126,6 +126,10 @@ function evaluateGroupRule(groupRule, ruleResults) {
   const minCount = Number.isFinite(groupRule.minRuleCount) ? groupRule.minRuleCount : 0;
   const minPercent = Number.isFinite(groupRule.minRulePercent) ? groupRule.minRulePercent : 0;
   const actualPercent = totalCount > 0 ? (trueCount / totalCount) * 100 : 0;
+
+  // Check max constraints
+  if (Number.isFinite(groupRule.maxRuleCount) && trueCount > groupRule.maxRuleCount) return false;
+  if (Number.isFinite(groupRule.maxRulePercent) && actualPercent > groupRule.maxRulePercent) return false;
   
   switch(ruleLogicType) {
     case "all":
@@ -1223,6 +1227,8 @@ async function groupruleForFireStoreAndStoreTimeStampsEtc(allArrayTemp, grouprul
     const totalRules = document.querySelectorAll(".rowChoice").length;
     const minCountValue = parseFloat(document.getElementById("minRuleCount").value);
     const minPercentValue = parseFloat(document.getElementById("minRulePercent").value);
+    const maxCountValue = parseFloat(document.getElementById("maxRuleCount").value);
+    const maxPercentValue = parseFloat(document.getElementById("maxRulePercent").value);
     const computedPercent = totalRules > 0 && Number.isFinite(minCountValue)
       ? (minCountValue / totalRules) * 100
       : 0;
@@ -1233,10 +1239,14 @@ async function groupruleForFireStoreAndStoreTimeStampsEtc(allArrayTemp, grouprul
     if (["gt", "gte", "lt", "eq", "count"].includes(grouprule.ruleLogicType)) {
       grouprule.minRuleCount = Number.isFinite(minCountValue) ? minCountValue : 0;
       grouprule.minRulePercent = Number.isFinite(computedPercent) ? computedPercent : 0;
+      if (Number.isFinite(maxCountValue)) grouprule.maxRuleCount = maxCountValue;
+      if (Number.isFinite(maxPercentValue)) grouprule.maxRulePercent = maxPercentValue;
     }
     if (grouprule.ruleLogicType === "percent") {
       grouprule.minRulePercent = Number.isFinite(minPercentValue) ? minPercentValue : 0;
       grouprule.minRuleCount = Number.isFinite(computedCount) ? computedCount : 0;
+      if (Number.isFinite(maxCountValue)) grouprule.maxRuleCount = maxCountValue;
+      if (Number.isFinite(maxPercentValue)) grouprule.maxRulePercent = maxPercentValue;
     }
     
     // Backward compatibility: set all0Any1True based on new logic type
@@ -2224,6 +2234,8 @@ function findNestedArray(saveObject){
     const ruleLogicType = document.getElementById("ruleLogicType").value;
     const ruleCountInput = document.getElementById("ruleCountInput");
     const rulePercentInput = document.getElementById("rulePercentInput");
+    const maxCountInput = document.getElementById("maxCountInput");
+    const maxPercentInput = document.getElementById("maxPercentInput");
     const displayText = document.getElementById("ruleLogicDisplayText");
     const totalRules = document.querySelectorAll(".rowChoice").length;
     const totalText = totalRules > 0 ? ` (${totalRules} rule${totalRules !== 1 ? "s" : ""})` : "";
@@ -2233,6 +2245,8 @@ function findNestedArray(saveObject){
     // Hide all input fields first
     ruleCountInput.classList.add("hidealways");
     rulePercentInput.classList.add("hidealways");
+    maxCountInput.classList.add("hidealways");
+    maxPercentInput.classList.add("hidealways");
 
     if (ruleLogicType === "percent" && lastGroupRuleInput === "count") {
       lastGroupRuleInput = "percent";
@@ -2241,6 +2255,8 @@ function findNestedArray(saveObject){
     if (["gt", "gte", "lt", "eq", "percent"].includes(ruleLogicType)) {
       ruleCountInput.classList.remove("hidealways");
       rulePercentInput.classList.remove("hidealways");
+      maxCountInput.classList.remove("hidealways");
+      maxPercentInput.classList.remove("hidealways");
       if (lastGroupRuleInput === "percent") {
         syncGroupRuleCountFromPercent(totalRules);
       } else {
@@ -2278,6 +2294,16 @@ function findNestedArray(saveObject){
       case "count":
         displayText.innerHTML = `Display when <b><u>at least</u></b> ${countText} rule(s) below are true${totalText}.`;
         break;
+    }
+
+    // Append max constraints text if set
+    const maxCountVal = parseFloat(document.getElementById("maxRuleCount").value);
+    const maxPercentVal = parseFloat(document.getElementById("maxRulePercent").value);
+    if (Number.isFinite(maxCountVal) && !maxCountInput.classList.contains("hidealways")) {
+      displayText.innerHTML += ` <br>(Max count: ${formatGroupRuleNumber(maxCountVal)})`;
+    }
+    if (Number.isFinite(maxPercentVal) && !maxPercentInput.classList.contains("hidealways")) {
+      displayText.innerHTML += ` <br>(Max percent: ${formatGroupRuleNumber(maxPercentVal)}%)`;
     }
 
     if (countHelp && percentHelp && ["gt", "gte", "lt", "eq", "percent"].includes(ruleLogicType)) {
@@ -3552,6 +3578,20 @@ function findNestedArray(saveObject){
             <small id="rulePercentHelp" class="form-text text-muted">Equivalent count will appear after selecting rules.</small>
           </div>
         </div>
+        <div id="maxCountInput" class="row mb-2 hidealways">
+          <div class="col-12">
+            <label for="maxRuleCount">Maximum number of true rules (optional):</label>
+            <input type="number" id="maxRuleCount" class="form-control" min="0" step="0.01" onchange="updateGroupRuleLogicDisplay()" style="max-width: 150px;">
+            <small class="form-text text-muted">If more than this number are true, result is FALSE.</small>
+          </div>
+        </div>
+        <div id="maxPercentInput" class="row mb-2 hidealways">
+          <div class="col-12">
+            <label for="maxRulePercent">Maximum percent of true rules (optional):</label>
+            <input type="number" id="maxRulePercent" class="form-control" min="0" max="100" step="0.01" onchange="updateGroupRuleLogicDisplay()" style="max-width: 150px;">
+            <small class="form-text text-muted">If more than this percent are true, result is FALSE.</small>
+          </div>
+        </div>
         <div class="row mt-3">
           <div class="col-12">
             <div class="alert alert-success" role="alert">
@@ -3586,6 +3626,15 @@ function findNestedArray(saveObject){
       if (savedLogicType === "percent" && questionnaireOutline.minRulePercent) {
         document.getElementById("minRulePercent").value = questionnaireOutline.minRulePercent;
       }
+
+      // Load max values
+      if (Number.isFinite(questionnaireOutline.maxRuleCount)) {
+        document.getElementById("maxRuleCount").value = questionnaireOutline.maxRuleCount;
+      }
+      if (Number.isFinite(questionnaireOutline.maxRulePercent)) {
+        document.getElementById("maxRulePercent").value = questionnaireOutline.maxRulePercent;
+      }
+
       updateGroupRuleLogicDisplay();
     } else if (questionnaireOutline.all0Any1True !== undefined) {
       // Backward compatibility with old all0Any1True checkbox

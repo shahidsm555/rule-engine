@@ -258,6 +258,30 @@
                     <small id="minPercentHelp" style="color: #666;">Equivalent count will appear here once rules are selected.</small>
                 </div>
 
+                <div id="maxCountInput" class="form-group hidealways">
+                    <label for="maxCount">Maximum number of true rules (optional):</label>
+                    <input type="number" id="maxCount" min="0" step="0.01">
+                    <small id="maxCountHelp" style="color: #666;">If more than this number of rules are true, result will be FALSE.</small>
+                </div>
+
+                <div id="maxPercentInput" class="form-group hidealways">
+                    <label for="maxPercent">Maximum percent of true rules (0-100, optional):</label>
+                    <input type="number" id="maxPercent" min="0" max="100" step="0.01">
+                    <small id="maxPercentHelp" style="color: #666;">If more than this percent of rules are true, result will be FALSE.</small>
+                </div>
+
+                <div id="maxCountInput" class="form-group hidealways">
+                    <label for="maxCount">Maximum number of true rules (optional):</label>
+                    <input type="number" id="maxCount" min="0" step="0.01">
+                    <small id="maxCountHelp" style="color: #666;">If more than this number of rules are true, result will be FALSE.</small>
+                </div>
+
+                <div id="maxPercentInput" class="form-group hidealways">
+                    <label for="maxPercent">Maximum percent of true rules (0-100, optional):</label>
+                    <input type="number" id="maxPercent" min="0" max="100" step="0.01">
+                    <small id="maxPercentHelp" style="color: #666;">If more than this percent of rules are true, result will be FALSE.</small>
+                </div>
+
                 <div class="logic-display">
                     <strong>📝 Logic Summary:</strong>
                     <p id="logicSummary" style="margin: 0.5rem 0 0 0;">Display only when <strong>all</strong> rules below are true.</p>
@@ -608,12 +632,16 @@
             const logicType = document.getElementById('logicType').value;
             const countInput = document.getElementById('countInput');
             const percentInput = document.getElementById('percentInput');
+            const maxCountInput = document.getElementById('maxCountInput');
+            const maxPercentInput = document.getElementById('maxPercentInput');
             const logicSummary = document.getElementById('logicSummary');
             const totalSelected = getSelectedRuleTotal();
             const totalText = totalSelected > 0 ? ` (${totalSelected} rule${totalSelected !== 1 ? 's' : ''})` : '';
 
             countInput.classList.add('hidealways');
             percentInput.classList.add('hidealways');
+            maxCountInput.classList.add('hidealways');
+            maxPercentInput.classList.add('hidealways');
 
             if (logicType === 'percent' && lastEditedInput === 'count') {
                 lastEditedInput = 'percent';
@@ -622,6 +650,8 @@
             if (['gt', 'gte', 'lt', 'eq', 'percent'].includes(logicType)) {
                 countInput.classList.remove('hidealways');
                 percentInput.classList.remove('hidealways');
+                maxCountInput.classList.remove('hidealways');
+                maxPercentInput.classList.remove('hidealways');
                 if (lastEditedInput === 'percent') {
                     syncCountFromPercent(totalSelected);
                 } else {
@@ -659,6 +689,16 @@
                 default:
                     logicSummary.innerHTML = `Display only when <strong>all</strong> rules are true${totalText}.`;
                     break;
+            }
+
+            // Append max constraints text if set
+            const maxCountVal = parseFloat(document.getElementById("maxCount").value);
+            const maxPercentVal = parseFloat(document.getElementById("maxPercent").value);
+            if (Number.isFinite(maxCountVal) && !maxCountInput.classList.contains("hidealways")) {
+                logicSummary.innerHTML += ` <br>(Max count: ${formatNumber(maxCountVal)})`;
+            }
+            if (Number.isFinite(maxPercentVal) && !maxPercentInput.classList.contains("hidealways")) {
+                logicSummary.innerHTML += ` <br>(Max percent: ${formatNumber(maxPercentVal)}%)`;
             }
 
             const minCountHelp = document.getElementById('minCountHelp');
@@ -973,11 +1013,21 @@
                     collection.minRulePercent = Number.isFinite(computedPercent) ? computedPercent : 0;
                     console.log('Added minRuleCount:', collection.minRuleCount);
                     console.log('Added minRulePercent:', collection.minRulePercent);
+                    // Add max values
+                    const maxCountValue = parseFloat(document.getElementById('maxCount').value);
+                    const maxPercentValue = parseFloat(document.getElementById('maxPercent').value);
+                    if (Number.isFinite(maxCountValue)) collection.maxRuleCount = maxCountValue;
+                    if (Number.isFinite(maxPercentValue)) collection.maxRulePercent = maxPercentValue;
                 } else if (logicType === 'percent') {
                     collection.minRulePercent = Number.isFinite(minPercentValue) ? minPercentValue : 0;
                     collection.minRuleCount = Number.isFinite(computedCount) ? computedCount : 0;
                     console.log('Added minRulePercent:', collection.minRulePercent);
                     console.log('Added minRuleCount:', collection.minRuleCount);
+                    // Add max values
+                    const maxCountValue = parseFloat(document.getElementById('maxCount').value);
+                    const maxPercentValue = parseFloat(document.getElementById('maxPercent').value);
+                    if (Number.isFinite(maxCountValue)) collection.maxRuleCount = maxCountValue;
+                    if (Number.isFinite(maxPercentValue)) collection.maxRulePercent = maxPercentValue;
                 }
 
                 console.log('Collection object created:', collection);

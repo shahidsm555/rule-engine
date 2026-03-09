@@ -11,6 +11,8 @@
     
     <!-- Database Initialization -->
     <script src="setupIndexedDB.js"></script>
+    <!-- Snapshot / Lazy-load / Diff architecture (2026-02-26) -->
+    <script src="snapshotManager.js"></script>
     
     <style>
         * {
@@ -277,6 +279,10 @@
 
         <div class="stats-bar">
             <div class="stat-card">
+                <div class="stat-number" id="totalQuestions">0</div>
+                <div class="stat-label">Questions</div>
+            </div>
+            <div class="stat-card">
                 <div class="stat-number" id="totalRules">0</div>
                 <div class="stat-label">Display Rules</div>
             </div>
@@ -295,6 +301,19 @@
         </div>
 
         <div class="dashboard-grid">
+            <!-- Manage Questions Card -->
+            <div class="card card-manage-questions" onclick="window.location.href='ManageQuestions.html'">
+                <span class="card-icon">❓</span>
+                <h2 class="card-title">Manage Questions</h2>
+                <p class="card-description">
+                    Create, view, edit, and delete questions. Supports 17 question types with answer choices and validation.
+                </p>
+                <div class="card-actions">
+                    <a href="ManageQuestions.html" class="btn btn-primary">Open Manager</a>
+                    <a href="addNewQuestion.html" class="btn btn-secondary">Add New Question</a>
+                </div>
+            </div>
+
             <!-- Manage Rules Card -->
             <div class="card card-manage-rules" onclick="window.location.href='ManageRules.html'">
                 <span class="card-icon">📝</span>
@@ -382,6 +401,7 @@
 
     <!-- IndexedDB Setup -->
     <script src="setupIndexedDB.js"></script>
+    <script src="snapshotManager.js"></script>
 
     <script>
         // Load statistics on page load
@@ -441,14 +461,28 @@
                     });
                 }
                 
+                // Count questions
+                let questionCount = 0;
+                if (db.objectStoreNames.contains('questionStore')) {
+                    const qTx = db.transaction('questionStore', 'readonly');
+                    const qStore = qTx.objectStore('questionStore');
+                    const qData = await new Promise((resolve, reject) => {
+                        const request = qStore.getAll();
+                        request.onsuccess = () => resolve(request.result || []);
+                        request.onerror = () => reject(request.error);
+                    });
+                    questionCount = qData.filter(q => q.keyPathValue && q.keyPathValue[0] === 'questionStore').length;
+                }
+
                 // Update stats
+                animateNumber('totalQuestions', questionCount);
                 animateNumber('totalRules', displayRules.length);
                 animateNumber('totalCollections', collections.length);
                 animateNumber('totalAuthors', authorsSet.size);
                 
                 db.close();
                 
-                console.log(`✓ Stats loaded: ${displayRules.length} rules, ${collections.length} collections, ${authorsSet.size} authors`);
+                console.log(`✓ Stats loaded: ${questionCount} questions, ${displayRules.length} rules, ${collections.length} collections, ${authorsSet.size} authors`);
                 
             } catch (error) {
                 console.error('Error loading statistics:', error);
@@ -515,6 +549,18 @@
                         request.onerror = () => reject(request.error);
                     });
                     console.log('✓ Cleared authorMetadata store');
+                }
+
+                // Clear questionStore if it exists
+                if (db.objectStoreNames.contains('questionStore')) {
+                    const qClearTx = db.transaction('questionStore', 'readwrite');
+                    const qClearStore = qClearTx.objectStore('questionStore');
+                    await new Promise((resolve, reject) => {
+                        const request = qClearStore.clear();
+                        request.onsuccess = () => resolve();
+                        request.onerror = () => reject(request.error);
+                    });
+                    console.log('✓ Cleared questionStore');
                 }
                 
                 // Create 20 authors with metadata
@@ -614,14 +660,193 @@
                 
                 // Add rules and collections
                 await addRulesAndCollections(db, sampleRules, sampleCollections);
-                
+
+                // Create sample questions with auto-generated IDs
+                // Helper to generate unique IDs (same format as addNewQuestion.html)
+                function genQID(index) {
+                    const base = Date.now().toString(36).toUpperCase();
+                    const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
+                    return `Q_${base}_${rand}${index}`;
+                }
+
+                const sampleQuestions = [
+                    {
+                        author: 'JSM', id: genQID(1),
+                        content: 'What is the applicant\'s age?',
+                        type: 'questionTypeDiv_number',
+                        answers: [], answerSort: [],
+                        unansweredComplete: true, unansweredExplain: false, answeredExplain: false,
+                        checkboxExplain: [], checkboxNoChange: []
+                    },
+                    {
+                        author: 'JSM', id: genQID(2),
+                        content: 'What is the applicant\'s current employment status?',
+                        type: 'questionTypeDiv_radio',
+                        answers: ['Full-time employed', 'Part-time employed', 'Self-employed', 'Unemployed', 'Retired', 'Student'],
+                        answerSort: [1, 2, 3, 4, 5, 6],
+                        unansweredComplete: true, unansweredExplain: true, answeredExplain: false,
+                        checkboxExplain: [false, false, true, true, false, false],
+                        checkboxNoChange: [false, false, false, false, false, false]
+                    },
+                    {
+                        author: 'JSM', id: genQID(3),
+                        content: 'What is the applicant\'s annual income range?',
+                        type: 'questionTypeDiv_dropdown',
+                        answers: ['Under $25,000', '$25,000 - $49,999', '$50,000 - $74,999', '$75,000 - $99,999', '$100,000 - $149,999', '$150,000+'],
+                        answerSort: [1, 2, 3, 4, 5, 6],
+                        unansweredComplete: true, unansweredExplain: false, answeredExplain: false,
+                        checkboxExplain: [false, false, false, false, false, false],
+                        checkboxNoChange: [false, false, false, false, false, false]
+                    },
+                    {
+                        author: 'AMK', id: genQID(4),
+                        content: 'What type of property is being considered?',
+                        type: 'questionTypeDiv_radio',
+                        answers: ['Single Family Home', 'Condominium', 'Townhouse', 'Multi-family (2-4 units)', 'Commercial', 'Land / Lot'],
+                        answerSort: [1, 2, 3, 4, 5, 6],
+                        unansweredComplete: true, unansweredExplain: false, answeredExplain: false,
+                        checkboxExplain: [false, false, false, false, true, true],
+                        checkboxNoChange: [false, false, false, false, false, false]
+                    },
+                    {
+                        author: 'AMK', id: genQID(5),
+                        content: 'Which types of insurance does the applicant currently have? (select all that apply)',
+                        type: 'questionTypeDiv_checkbox',
+                        answers: ['Health Insurance', 'Life Insurance', 'Auto Insurance', 'Homeowner\'s Insurance', 'Disability Insurance', 'None'],
+                        answerSort: [1, 2, 3, 4, 5, 6],
+                        unansweredComplete: false, unansweredExplain: false, answeredExplain: false,
+                        checkboxExplain: [false, false, false, false, false, true],
+                        checkboxNoChange: [false, false, false, false, false, false]
+                    },
+                    {
+                        author: 'RJP', id: genQID(6),
+                        content: 'What is the applicant\'s date of birth?',
+                        type: 'questionTypeDiv_date',
+                        answers: [], answerSort: [],
+                        unansweredComplete: true, unansweredExplain: false, answeredExplain: false,
+                        checkboxExplain: [], checkboxNoChange: []
+                    },
+                    {
+                        author: 'RJP', id: genQID(7),
+                        content: 'What is the applicant\'s email address?',
+                        type: 'questionTypeDiv_email',
+                        answers: [], answerSort: [],
+                        unansweredComplete: true, unansweredExplain: false, answeredExplain: false,
+                        checkboxExplain: [], checkboxNoChange: []
+                    },
+                    {
+                        author: 'EMW', id: genQID(8),
+                        content: 'What is the applicant\'s phone number?',
+                        type: 'questionTypeDiv_tel',
+                        answers: [], answerSort: [],
+                        unansweredComplete: false, unansweredExplain: false, answeredExplain: false,
+                        checkboxExplain: [], checkboxNoChange: []
+                    },
+                    {
+                        author: 'EMW', id: genQID(9),
+                        content: 'Select the applicant\'s credit score range',
+                        type: 'questionTypeDiv_modal',
+                        answers: ['300-499 (Poor)', '500-579 (Very Poor)', '580-619 (Fair)', '620-679 (Average)', '680-719 (Good)', '720-779 (Very Good)', '780-850 (Excellent)'],
+                        answerSort: [1, 2, 3, 4, 5, 6, 7],
+                        unansweredComplete: true, unansweredExplain: false, answeredExplain: false,
+                        checkboxExplain: [false, false, false, false, false, false, false],
+                        checkboxNoChange: [false, false, false, false, false, false, false]
+                    },
+                    {
+                        author: 'DLH', id: genQID(10),
+                        content: 'Provide any additional notes or comments about this application',
+                        type: 'questionTypeDiv_text',
+                        answers: [], answerSort: [],
+                        unansweredComplete: false, unansweredExplain: false, answeredExplain: false,
+                        checkboxExplain: [], checkboxNoChange: []
+                    },
+                    {
+                        author: 'DLH', id: genQID(11),
+                        content: 'Upload supporting documents for this application',
+                        type: 'questionTypeDiv_file',
+                        answers: [], answerSort: [],
+                        unansweredComplete: false, unansweredExplain: false, answeredExplain: false,
+                        checkboxExplain: [], checkboxNoChange: []
+                    },
+                    {
+                        author: 'STC', id: genQID(12),
+                        content: 'This section is for informational purposes only. No response is required. The applicant should review the attached disclosure documents before proceeding.',
+                        type: 'questionTypeDiv_na',
+                        answers: [], answerSort: [],
+                        unansweredComplete: false, unansweredExplain: false, answeredExplain: false,
+                        checkboxExplain: [], checkboxNoChange: []
+                    },
+                    {
+                        author: 'STC', id: genQID(13),
+                        content: 'Has the applicant acknowledged the associated risks? If not applicable, please explain why.',
+                        type: 'questionTypeDiv_naExplained',
+                        answers: [], answerSort: [],
+                        unansweredComplete: false, unansweredExplain: true, answeredExplain: false,
+                        checkboxExplain: [], checkboxNoChange: []
+                    },
+                    {
+                        author: 'MRB', id: genQID(14),
+                        content: 'What is the applicant\'s preferred method of contact?',
+                        type: 'questionTypeDiv_radio',
+                        answers: ['Email', 'Phone', 'Text/SMS', 'Mail'],
+                        answerSort: [1, 2, 3, 4],
+                        unansweredComplete: false, unansweredExplain: false, answeredExplain: false,
+                        checkboxExplain: [false, false, false, false],
+                        checkboxNoChange: [false, false, false, false]
+                    },
+                    {
+                        author: 'MRB', id: genQID(15),
+                        content: 'Enter the applicant\'s website or portfolio URL (if applicable)',
+                        type: 'questionTypeDiv_url',
+                        answers: [], answerSort: [],
+                        unansweredComplete: false, unansweredExplain: false, answeredExplain: false,
+                        checkboxExplain: [], checkboxNoChange: []
+                    }
+                ];
+
+                // Add sample questions to questionStore
+                if (db.objectStoreNames.contains('questionStore')) {
+                    const qTx = db.transaction('questionStore', 'readwrite');
+                    const qStore = qTx.objectStore('questionStore');
+
+                    for (const s of sampleQuestions) {
+                        const now = Date.now();
+                        const obj = {
+                            keyPathValue: ['questionStore', 1, s.author, 1, s.id],
+                            questionAuthor: s.author,
+                            questionID: s.id,
+                            questionContent: s.content,
+                            questionContentInnerText: s.content,
+                            questionType: s.type,
+                            questionUnansweredComplete: s.unansweredComplete,
+                            questionUnansweredRequiresExplanation: s.unansweredExplain,
+                            questionAnsweredRequiresExplanation: s.answeredExplain,
+                            questionAnswerDescription: s.answers,
+                            questionAnswerDescriptionInnerText: s.answers,
+                            questionAnswerSort: s.answerSort,
+                            checkboxExplain: s.checkboxExplain,
+                            checkboxNoChange: s.checkboxNoChange,
+                            versionDateSince1969: now,
+                            localTimeString: new Date().toString()
+                        };
+                        await new Promise((resolve, reject) => {
+                            const request = qStore.put(obj);
+                            request.onsuccess = () => resolve();
+                            request.onerror = () => reject(request.error);
+                        });
+                    }
+                    console.log(`✓ Added ${sampleQuestions.length} sample questions to questionStore`);
+                } else {
+                    console.warn('⚠ questionStore not found - skipping sample questions');
+                }
+
                 db.close();
                 
                 // Refresh statistics
                 await loadStatistics();
                 
                 // Show success message
-                alert(`Created comprehensive sample data! 📊\n\nStatistics:\n• ${sampleAuthors.length} Authors\n• ${sampleRules.length} Display Rules\n• ${sampleCollections.length} Collections\n• Total: ${sampleAuthors.length + sampleRules.length + sampleCollections.length} records\n\nData successfully loaded into the database!`);
+                alert(`Created comprehensive sample data! 📊\n\nStatistics:\n• ${sampleAuthors.length} Authors\n• ${sampleRules.length} Display Rules\n• ${sampleCollections.length} Collections\n• ${sampleQuestions.length} Questions\n• Total: ${sampleAuthors.length + sampleRules.length + sampleCollections.length + sampleQuestions.length} records\n\nData successfully loaded into the database!`);
                 
             } catch (error) {
                 console.error('Error creating sample data:', error);

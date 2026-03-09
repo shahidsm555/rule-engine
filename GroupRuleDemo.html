@@ -65,6 +65,18 @@
                     <small class="form-text text-muted">Enter a value between 1 and 100</small>
                 </div>
             </div>
+            <div id="maxCountInput" class="row mb-2 hidealways">
+                <div class="col-12">
+                    <label for="maxRuleCount">Maximum number of true rules (optional):</label>
+                    <input type="number" id="maxRuleCount" class="form-control" min="0" step="0.01" onchange="updateGroupRuleLogicDisplay()" style="max-width: 150px;">
+                </div>
+            </div>
+            <div id="maxPercentInput" class="row mb-2 hidealways">
+                <div class="col-12">
+                    <label for="maxRulePercent">Maximum percentage of true rules (optional):</label>
+                    <input type="number" id="maxRulePercent" class="form-control" min="0" max="100" step="0.01" onchange="updateGroupRuleLogicDisplay()" style="max-width: 150px;">
+                </div>
+            </div>
             <div class="row mt-3">
                 <div class="col-12">
                     <div class="alert alert-success" role="alert">
@@ -120,11 +132,15 @@
             const ruleLogicType = document.getElementById("ruleLogicType").value;
             const ruleCountInput = document.getElementById("ruleCountInput");
             const rulePercentInput = document.getElementById("rulePercentInput");
+            const maxCountInput = document.getElementById("maxCountInput");
+            const maxPercentInput = document.getElementById("maxPercentInput");
             const displayText = document.getElementById("ruleLogicDisplayText");
             
             // Hide all input fields first
             ruleCountInput.classList.add("hidealways");
             rulePercentInput.classList.add("hidealways");
+            maxCountInput.classList.add("hidealways");
+            maxPercentInput.classList.add("hidealways");
             
             switch(ruleLogicType) {
                 case "all":
@@ -135,14 +151,26 @@
                     break;
                 case "count":
                     ruleCountInput.classList.remove("hidealways");
+                    maxCountInput.classList.remove("hidealways");
                     const countValue = document.getElementById("minRuleCount").value || "N";
                     displayText.innerHTML = `Display when at least <b><u>${countValue}</u></b> rule(s) below are true.`;
                     break;
                 case "percent":
                     rulePercentInput.classList.remove("hidealways");
+                    maxPercentInput.classList.remove("hidealways");
                     const percentValue = document.getElementById("minRulePercent").value || "X";
                     displayText.innerHTML = `Display when at least <b><u>${percentValue}%</u></b> of rules below are true.`;
                     break;
+            }
+
+            // Append max info if visible
+            const maxCount = document.getElementById("maxRuleCount").value;
+            const maxPercent = document.getElementById("maxRulePercent").value;
+            if (!maxCountInput.classList.contains("hidealways") && maxCount) {
+                displayText.innerHTML += ` <br>(Max count: ${maxCount})`;
+            }
+            if (!maxPercentInput.classList.contains("hidealways") && maxPercent) {
+                displayText.innerHTML += ` <br>(Max percent: ${maxPercent}%)`;
             }
         }
 
@@ -199,6 +227,12 @@
                     badge.textContent = 'FALSE';
                 }
             });
+            
+            // Auto-update result if visible
+            const resultDiv = document.getElementById("evaluationResult");
+            if (!resultDiv.classList.contains("hidealways")) {
+                evaluateRules();
+            }
         }
 
         function evaluateGroupRule(groupRule, ruleResults) {
@@ -211,6 +245,11 @@
             const trueCount = ruleResults.filter(r => r === true).length;
             const totalCount = ruleResults.length;
             const ruleLogicType = groupRule.ruleLogicType;
+            const actualPercent = totalCount > 0 ? (trueCount / totalCount) * 100 : 0;
+
+            // Check max constraints
+            if (Number.isFinite(groupRule.maxRuleCount) && trueCount > groupRule.maxRuleCount) return false;
+            if (Number.isFinite(groupRule.maxRulePercent) && actualPercent > groupRule.maxRulePercent) return false;
             
             switch(ruleLogicType) {
                 case "all":
@@ -240,7 +279,9 @@
             const groupRule = {
                 ruleLogicType: document.getElementById("ruleLogicType").value,
                 minRuleCount: parseInt(document.getElementById("minRuleCount").value) || 1,
-                minRulePercent: parseInt(document.getElementById("minRulePercent").value) || 50
+                minRulePercent: parseInt(document.getElementById("minRulePercent").value) || 50,
+                maxRuleCount: document.getElementById("maxRuleCount").value ? parseFloat(document.getElementById("maxRuleCount").value) : undefined,
+                maxRulePercent: document.getElementById("maxRulePercent").value ? parseFloat(document.getElementById("maxRulePercent").value) : undefined
             };
 
             const result = evaluateGroupRule(groupRule, ruleResults);
