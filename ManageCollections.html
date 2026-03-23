@@ -264,6 +264,20 @@
     <script>
         let allCollections = [];
 
+        function getCollectionAuthor(collection) {
+            if (collection?.groupruleAuthor) return collection.groupruleAuthor;
+            const keyPath = collection?.keyPathValue || [];
+            // Support [type, author, id] and [type, 1, author, 1, id]
+            return keyPath[2] || keyPath[1] || 'Unknown';
+        }
+
+        function getCollectionId(collection) {
+            if (collection?.groupruleID) return collection.groupruleID;
+            const keyPath = collection?.keyPathValue || [];
+            // Support [type, author, id] and [type, 1, author, 1, id]
+            return keyPath[4] || keyPath[2] || 'Unknown';
+        }
+
         // Wait for database to be ready
         function waitForDatabase() {
             return new Promise((resolve) => {
@@ -455,8 +469,11 @@
                 card.className = 'collection-card';
                 
                 // Add data attributes for context menu
-                card.dataset.author = collection.groupruleAuthor;
-                card.dataset.id = collection.groupruleID;
+                const collectionAuthor = getCollectionAuthor(collection);
+                const collectionId = getCollectionId(collection);
+
+                card.dataset.author = collectionAuthor;
+                card.dataset.id = collectionId;
                 
                 const logicType = collection.ruleLogicType || 'all';
                 const logicClass = `logic-${logicType}`;
@@ -527,9 +544,9 @@
             card.innerHTML = `
                 <div class="collection-header">
                     <div>
-                        <div class="collection-title">${collection.groupruleID}</div>
+                        <div class="collection-title">${collectionId}</div>
                         <div class="collection-meta">
-                            <strong>Author:</strong> ${collection.groupruleAuthor} | 
+                            <strong>Author:</strong> ${collectionAuthor} | 
                             <strong>Created:</strong> ${new Date(collection.versionDateSince1969).toLocaleDateString()}
                         </div>
                     </div>
@@ -589,8 +606,8 @@
             // Apply search filter
             if (searchText) {
                 filtered = filtered.filter(collection => {
-                    const author = (collection.groupruleAuthor || '').toLowerCase();
-                    const id = (collection.groupruleID || '').toLowerCase();
+                    const author = String(getCollectionAuthor(collection) || '').toLowerCase();
+                    const id = String(getCollectionId(collection) || '').toLowerCase();
                     const content = (collection.groupruleContent || collection.groupruleContentInnerText || '').toLowerCase();
                     
                     return author.includes(searchText) || 
@@ -759,7 +776,7 @@
                 if (collections.length > 0) {
                     message += `📦 Collections:\n`;
                     collections.forEach(c => {
-                        message += `  • ${c.groupruleID} (${c.groupruleAuthor})\n`;
+                        message += `  • ${getCollectionId(c)} (${getCollectionAuthor(c)})\n`;
                     });
                 } else {
                     message += `⚠️ No collections found!\n\nYou can:\n1. Click "New Collection" to create one\n2. Go to createTestData.html to create sample data`;
@@ -1029,8 +1046,14 @@
                     e.preventDefault();
                     const author = collectionCard.dataset.author;
                     const id = collectionCard.dataset.id;
-                    // Construct the full keyPathValue
-                    const keyPathValue = ["groupruleStore", 1, author, 1, id];
+
+                    const matchedCollection = allCollections.find(c =>
+                        String(getCollectionAuthor(c)) === String(author) &&
+                        String(getCollectionId(c)) === String(id)
+                    );
+
+                    // Prefer persisted keyPathValue to support both old and new key formats.
+                    const keyPathValue = matchedCollection?.keyPathValue || ["groupruleStore", author, id];
                     currentContextCollection = { author, id, keyPathValue };
                     
                     helpSystem.showContextMenu(e.pageX, e.pageY, [

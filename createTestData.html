@@ -109,6 +109,15 @@
         </div>
 
         <div style="text-align: center; margin-top: 2rem;">
+            <button class="btn btn-primary" onclick="seedSampleQuestionnaire()">
+                🧪 Seed Multi-Question Questionnaire
+            </button>
+            <button class="btn btn-primary" onclick="seedLawyersQuestionnaire()">
+                ⚖️ Seed Lawyers Survey Questionnaire
+            </button>
+            <button class="btn btn-primary" onclick="seedCPAQuestionnaire()">
+                🧮 Seed CPA Litigation Support Questionnaire
+            </button>
             <button class="btn btn-success" onclick="createTestData()">
                 ✨ Create Test Data (Clear & Create)
             </button>
@@ -357,6 +366,498 @@
             }
         ];
 
+        const sampleSurveyQuestions = [
+            {
+                keyPathValue: ['questionStore', 1, 'SAMPLE', 1, 'SAMPLE_Q1'],
+                questionAuthor: 'SAMPLE',
+                questionID: 'SAMPLE_Q1',
+                questionContent: 'What is your preferred contact method for updates?',
+                questionContentInnerText: 'What is your preferred contact method for updates?',
+                questionType: 'questionTypeDiv_radio',
+                questionTypeDiv_radio: true,
+                questionAnswerList: [
+                    { text: 'Email', questionAnswerDescription: 'Email', explanationRequired: false, display: true },
+                    { text: 'Phone', questionAnswerDescription: 'Phone', explanationRequired: false, display: true },
+                    { text: 'SMS', questionAnswerDescription: 'SMS', explanationRequired: false, display: true }
+                ],
+                trueAnswerList: ['Email', 'Phone', 'SMS'],
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ['questionStore', 1, 'SAMPLE', 1, 'SAMPLE_Q2'],
+                questionAuthor: 'SAMPLE',
+                questionID: 'SAMPLE_Q2',
+                questionContent: 'Please enter your full name.',
+                questionContentInnerText: 'Please enter your full name.',
+                questionType: 'questionTypeDiv_text',
+                questionTypeDiv_text: true,
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ['questionStore', 1, 'SAMPLE', 1, 'SAMPLE_Q3'],
+                questionAuthor: 'SAMPLE',
+                questionID: 'SAMPLE_Q3',
+                questionContent: 'How old are you?',
+                questionContentInnerText: 'How old are you?',
+                questionType: 'questionTypeDiv_number',
+                questionTypeDiv_number: true,
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ['questionStore', 1, 'SAMPLE', 1, 'SAMPLE_Q4'],
+                questionAuthor: 'SAMPLE',
+                questionID: 'SAMPLE_Q4',
+                questionContent: 'Select your country.',
+                questionContentInnerText: 'Select your country.',
+                questionType: 'questionTypeDiv_dropdown',
+                questionTypeDiv_dropdown: true,
+                questionAnswerList: [
+                    { text: 'Pakistan', questionAnswerDescription: 'Pakistan', explanationRequired: false, display: true },
+                    { text: 'UAE', questionAnswerDescription: 'UAE', explanationRequired: false, display: true },
+                    { text: 'Saudi Arabia', questionAnswerDescription: 'Saudi Arabia', explanationRequired: false, display: true },
+                    { text: 'Other', questionAnswerDescription: 'Other', explanationRequired: true, display: true }
+                ],
+                trueAnswerList: ['Pakistan', 'UAE', 'Saudi Arabia', 'Other'],
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ['questionStore', 1, 'SAMPLE', 1, 'SAMPLE_Q5'],
+                questionAuthor: 'SAMPLE',
+                questionID: 'SAMPLE_Q5',
+                questionContent: 'What is your email address?',
+                questionContentInnerText: 'What is your email address?',
+                questionType: 'questionTypeDiv_email',
+                questionTypeDiv_email: true,
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ['questionStore', 1, 'SAMPLE', 1, 'SAMPLE_Q6'],
+                questionAuthor: 'SAMPLE',
+                questionID: 'SAMPLE_Q6',
+                questionContent: 'What is your phone number?',
+                questionContentInnerText: 'What is your phone number?',
+                questionType: 'questionTypeDiv_tel',
+                questionTypeDiv_tel: true,
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ['questionStore', 1, 'SAMPLE', 1, 'SAMPLE_Q7'],
+                questionAuthor: 'SAMPLE',
+                questionID: 'SAMPLE_Q7',
+                questionContent: 'What is your date of birth?',
+                questionContentInnerText: 'What is your date of birth?',
+                questionType: 'questionTypeDiv_date',
+                questionTypeDiv_date: true,
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ['questionStore', 1, 'SAMPLE', 1, 'SAMPLE_Q8'],
+                questionAuthor: 'SAMPLE',
+                questionID: 'SAMPLE_Q8',
+                questionContent: 'Are you currently employed?',
+                questionContentInnerText: 'Are you currently employed?',
+                questionType: 'questionTypeDiv_checkbox',
+                questionTypeDiv_checkbox: true,
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ['questionStore', 1, 'SAMPLE', 1, 'SAMPLE_Q9'],
+                questionAuthor: 'SAMPLE',
+                questionID: 'SAMPLE_Q9',
+                questionContent: 'What is your highest education level?',
+                questionContentInnerText: 'What is your highest education level?',
+                questionType: 'questionTypeDiv_modal',
+                questionTypeDiv_modal: true,
+                questionAnswerList: [
+                    { text: 'High School', questionAnswerDescription: 'High School', explanationRequired: false, display: true },
+                    { text: 'Bachelors', questionAnswerDescription: 'Bachelors', explanationRequired: false, display: true },
+                    { text: 'Masters', questionAnswerDescription: 'Masters', explanationRequired: false, display: true },
+                    { text: 'PhD', questionAnswerDescription: 'PhD', explanationRequired: false, display: true }
+                ],
+                trueAnswerList: ['High School', 'Bachelors', 'Masters', 'PhD'],
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ['questionStore', 1, 'SAMPLE', 1, 'SAMPLE_Q10'],
+                questionAuthor: 'SAMPLE',
+                questionID: 'SAMPLE_Q10',
+                questionContent: 'LinkedIn profile URL (optional).',
+                questionContentInnerText: 'LinkedIn profile URL (optional).',
+                questionType: 'questionTypeDiv_url',
+                questionTypeDiv_url: true,
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            }
+        ];
+
+        const sampleQuestionRows = sampleSurveyQuestions.map((q, idx) => ({
+            sortPosition: idx + 1,
+            questionAuthor: q.questionAuthor,
+            questionID: q.questionID,
+            rowStatus: 'published',
+            ruleRef: null
+        }));
+
+        const sampleSurveyQuestionnaire = {
+            keyPathValue: ['questionnaireStore', 1, 'SAMPLE', 1, 'SAMPLE_QNNR_001'],
+            questionnaireAuthor: 'SAMPLE',
+            questionnaireID: 'SAMPLE_QNNR_001',
+            questionnaireContent: 'Sample End-to-End Multi Question Survey',
+            questionnaireRow: sampleSurveyQuestions.map(q => `${q.questionAuthor}/${q.questionID}`),
+            questionAnswerChoices: sampleQuestionRows,
+            rowStatus: 'published',
+            versionDateSince1969: Date.now(),
+            localTimeString: new Date().toString()
+        };
+
+        const sampleAuthorMetadata = {
+            authorName: 'SAMPLE',
+            fullName: 'Sample Test Author',
+            email: 'sample@example.com',
+            createdAt: Date.now()
+        };
+
+        const lawyersSurveyQuestions = [
+            {
+                keyPathValue: ['questionStore', 1, 'LAW', 1, 'LAW_Q1'],
+                questionAuthor: 'LAW',
+                questionID: 'LAW_Q1',
+                questionContent: 'What type of legal matter best describes your case?',
+                questionContentInnerText: 'What type of legal matter best describes your case?',
+                questionType: 'questionTypeDiv_dropdown',
+                questionTypeDiv_dropdown: true,
+                questionAnswerList: [
+                    { text: 'Family Law', questionAnswerDescription: 'Family Law', explanationRequired: false, display: true },
+                    { text: 'Criminal Defense', questionAnswerDescription: 'Criminal Defense', explanationRequired: false, display: true },
+                    { text: 'Civil Litigation', questionAnswerDescription: 'Civil Litigation', explanationRequired: false, display: true },
+                    { text: 'Corporate/Business', questionAnswerDescription: 'Corporate/Business', explanationRequired: false, display: true },
+                    { text: 'Immigration', questionAnswerDescription: 'Immigration', explanationRequired: false, display: true },
+                    { text: 'Other', questionAnswerDescription: 'Other', explanationRequired: true, display: true }
+                ],
+                trueAnswerList: ['Family Law', 'Criminal Defense', 'Civil Litigation', 'Corporate/Business', 'Immigration', 'Other'],
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ['questionStore', 1, 'LAW', 1, 'LAW_Q2'],
+                questionAuthor: 'LAW',
+                questionID: 'LAW_Q2',
+                questionContent: 'Please provide a brief summary of your legal issue.',
+                questionContentInnerText: 'Please provide a brief summary of your legal issue.',
+                questionType: 'questionTypeDiv_text',
+                questionTypeDiv_text: true,
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ['questionStore', 1, 'LAW', 1, 'LAW_Q3'],
+                questionAuthor: 'LAW',
+                questionID: 'LAW_Q3',
+                questionContent: 'How urgent is this matter?',
+                questionContentInnerText: 'How urgent is this matter?',
+                questionType: 'questionTypeDiv_radio',
+                questionTypeDiv_radio: true,
+                questionAnswerList: [
+                    { text: 'Immediate (within 24 hours)', questionAnswerDescription: 'Immediate (within 24 hours)', explanationRequired: false, display: true },
+                    { text: 'Within this week', questionAnswerDescription: 'Within this week', explanationRequired: false, display: true },
+                    { text: 'Within this month', questionAnswerDescription: 'Within this month', explanationRequired: false, display: true },
+                    { text: 'Not urgent', questionAnswerDescription: 'Not urgent', explanationRequired: false, display: true }
+                ],
+                trueAnswerList: ['Immediate (within 24 hours)', 'Within this week', 'Within this month', 'Not urgent'],
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ['questionStore', 1, 'LAW', 1, 'LAW_Q4'],
+                questionAuthor: 'LAW',
+                questionID: 'LAW_Q4',
+                questionContent: 'Do you already have court dates scheduled?',
+                questionContentInnerText: 'Do you already have court dates scheduled?',
+                questionType: 'questionTypeDiv_checkbox',
+                questionTypeDiv_checkbox: true,
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ['questionStore', 1, 'LAW', 1, 'LAW_Q5'],
+                questionAuthor: 'LAW',
+                questionID: 'LAW_Q5',
+                questionContent: 'Estimated claim/dispute amount (if applicable).',
+                questionContentInnerText: 'Estimated claim/dispute amount (if applicable).',
+                questionType: 'questionTypeDiv_number',
+                questionTypeDiv_number: true,
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ['questionStore', 1, 'LAW', 1, 'LAW_Q6'],
+                questionAuthor: 'LAW',
+                questionID: 'LAW_Q6',
+                questionContent: 'What is your preferred consultation date?',
+                questionContentInnerText: 'What is your preferred consultation date?',
+                questionType: 'questionTypeDiv_date',
+                questionTypeDiv_date: true,
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ['questionStore', 1, 'LAW', 1, 'LAW_Q7'],
+                questionAuthor: 'LAW',
+                questionID: 'LAW_Q7',
+                questionContent: 'Your contact email address.',
+                questionContentInnerText: 'Your contact email address.',
+                questionType: 'questionTypeDiv_email',
+                questionTypeDiv_email: true,
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ['questionStore', 1, 'LAW', 1, 'LAW_Q8'],
+                questionAuthor: 'LAW',
+                questionID: 'LAW_Q8',
+                questionContent: 'Your contact phone number.',
+                questionContentInnerText: 'Your contact phone number.',
+                questionType: 'questionTypeDiv_tel',
+                questionTypeDiv_tel: true,
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            }
+        ];
+
+        const lawyersQuestionRows = lawyersSurveyQuestions.map((q, idx) => ({
+            sortPosition: idx + 1,
+            questionAuthor: q.questionAuthor,
+            questionID: q.questionID,
+            rowStatus: 'published',
+            ruleRef: null
+        }));
+
+        const lawyersSurveyQuestionnaire = {
+            keyPathValue: ['questionnaireStore', 1, 'LAW', 1, 'LAWYERS_QNNR_001'],
+            questionnaireAuthor: 'LAW',
+            questionnaireID: 'LAWYERS_QNNR_001',
+            questionnaireContent: 'Lawyers Client Intake Survey',
+            questionnaireRow: lawyersSurveyQuestions.map(q => `${q.questionAuthor}/${q.questionID}`),
+            questionAnswerChoices: lawyersQuestionRows,
+            rowStatus: 'published',
+            versionDateSince1969: Date.now(),
+            localTimeString: new Date().toString()
+        };
+
+        const lawyersAuthorMetadata = {
+            authorName: 'LAW',
+            fullName: 'Law Office Intake Team',
+            email: 'intake@lawfirm.example',
+            createdAt: Date.now()
+        };
+
+        /* ── CPA / CA Litigation Support Specialist ── */
+        const cpaLitigationQuestions = [
+            {
+                keyPathValue: ['questionStore', 1, 'CPA', 1, 'CPA_Q1'],
+                questionAuthor: 'CPA',
+                questionID: 'CPA_Q1',
+                questionContent: 'What type of litigation support service do you require?',
+                questionContentInnerText: 'What type of litigation support service do you require?',
+                questionType: 'questionTypeDiv_dropdown',
+                questionTypeDiv_dropdown: true,
+                questionAnswerList: [
+                    { text: 'Damage Quantification / Lost Profits', questionAnswerDescription: 'Damage Quantification / Lost Profits', explanationRequired: false, display: true },
+                    { text: 'Business Valuation', questionAnswerDescription: 'Business Valuation', explanationRequired: false, display: true },
+                    { text: 'Forensic Accounting / Fraud Investigation', questionAnswerDescription: 'Forensic Accounting / Fraud Investigation', explanationRequired: false, display: true },
+                    { text: 'Expert Witness Testimony', questionAnswerDescription: 'Expert Witness Testimony', explanationRequired: false, display: true },
+                    { text: 'Financial Statement Analysis', questionAnswerDescription: 'Financial Statement Analysis', explanationRequired: false, display: true },
+                    { text: 'Tracing / Asset Recovery', questionAnswerDescription: 'Tracing / Asset Recovery', explanationRequired: false, display: true },
+                    { text: 'Other', questionAnswerDescription: 'Other', explanationRequired: true, display: true }
+                ],
+                trueAnswerList: ['Damage Quantification / Lost Profits','Business Valuation','Forensic Accounting / Fraud Investigation','Expert Witness Testimony','Financial Statement Analysis','Tracing / Asset Recovery','Other'],
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ['questionStore', 1, 'CPA', 1, 'CPA_Q2'],
+                questionAuthor: 'CPA',
+                questionID: 'CPA_Q2',
+                questionContent: 'What is the nature of the dispute?',
+                questionContentInnerText: 'What is the nature of the dispute?',
+                questionType: 'questionTypeDiv_radio',
+                questionTypeDiv_radio: true,
+                questionAnswerList: [
+                    { text: 'Commercial / Contract Dispute', questionAnswerDescription: 'Commercial / Contract Dispute', explanationRequired: false, display: true },
+                    { text: 'Shareholder / Partnership Dispute', questionAnswerDescription: 'Shareholder / Partnership Dispute', explanationRequired: false, display: true },
+                    { text: 'Intellectual Property', questionAnswerDescription: 'Intellectual Property', explanationRequired: false, display: true },
+                    { text: 'Employment / Wrongful Termination', questionAnswerDescription: 'Employment / Wrongful Termination', explanationRequired: false, display: true },
+                    { text: 'Divorce / Matrimonial Financial', questionAnswerDescription: 'Divorce / Matrimonial Financial', explanationRequired: false, display: true },
+                    { text: 'Personal Injury / Wrongful Death', questionAnswerDescription: 'Personal Injury / Wrongful Death', explanationRequired: false, display: true },
+                    { text: 'Insurance Dispute', questionAnswerDescription: 'Insurance Dispute', explanationRequired: false, display: true },
+                    { text: 'Other', questionAnswerDescription: 'Other', explanationRequired: true, display: true }
+                ],
+                trueAnswerList: ['Commercial / Contract Dispute','Shareholder / Partnership Dispute','Intellectual Property','Employment / Wrongful Termination','Divorce / Matrimonial Financial','Personal Injury / Wrongful Death','Insurance Dispute','Other'],
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ['questionStore', 1, 'CPA', 1, 'CPA_Q3'],
+                questionAuthor: 'CPA',
+                questionID: 'CPA_Q3',
+                questionContent: 'Please provide a brief description of the financial dispute.',
+                questionContentInnerText: 'Please provide a brief description of the financial dispute.',
+                questionType: 'questionTypeDiv_text',
+                questionTypeDiv_text: true,
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ['questionStore', 1, 'CPA', 1, 'CPA_Q4'],
+                questionAuthor: 'CPA',
+                questionID: 'CPA_Q4',
+                questionContent: 'What is the current stage of the litigation?',
+                questionContentInnerText: 'What is the current stage of the litigation?',
+                questionType: 'questionTypeDiv_dropdown',
+                questionTypeDiv_dropdown: true,
+                questionAnswerList: [
+                    { text: 'Pre-Litigation / Investigation', questionAnswerDescription: 'Pre-Litigation / Investigation', explanationRequired: false, display: true },
+                    { text: 'Pleadings / Early Stage', questionAnswerDescription: 'Pleadings / Early Stage', explanationRequired: false, display: true },
+                    { text: 'Discovery / Examination for Discovery', questionAnswerDescription: 'Discovery / Examination for Discovery', explanationRequired: false, display: true },
+                    { text: 'Trial Preparation', questionAnswerDescription: 'Trial Preparation', explanationRequired: false, display: true },
+                    { text: 'Trial / Hearing', questionAnswerDescription: 'Trial / Hearing', explanationRequired: false, display: true },
+                    { text: 'Post-Trial / Appeal', questionAnswerDescription: 'Post-Trial / Appeal', explanationRequired: false, display: true }
+                ],
+                trueAnswerList: ['Pre-Litigation / Investigation','Pleadings / Early Stage','Discovery / Examination for Discovery','Trial Preparation','Trial / Hearing','Post-Trial / Appeal'],
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ['questionStore', 1, 'CPA', 1, 'CPA_Q5'],
+                questionAuthor: 'CPA',
+                questionID: 'CPA_Q5',
+                questionContent: 'Estimated total financial amount at issue ($).',
+                questionContentInnerText: 'Estimated total financial amount at issue ($).',
+                questionType: 'questionTypeDiv_number',
+                questionTypeDiv_number: true,
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ['questionStore', 1, 'CPA', 1, 'CPA_Q6'],
+                questionAuthor: 'CPA',
+                questionID: 'CPA_Q6',
+                questionContent: 'Has an opposing expert witness (CPA/CA) already been retained?',
+                questionContentInnerText: 'Has an opposing expert witness (CPA/CA) already been retained?',
+                questionType: 'questionTypeDiv_radio',
+                questionTypeDiv_radio: true,
+                questionAnswerList: [
+                    { text: 'Yes', questionAnswerDescription: 'Yes', explanationRequired: false, display: true },
+                    { text: 'No', questionAnswerDescription: 'No', explanationRequired: false, display: true },
+                    { text: 'Unknown', questionAnswerDescription: 'Unknown', explanationRequired: false, display: true }
+                ],
+                trueAnswerList: ['Yes','No','Unknown'],
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ['questionStore', 1, 'CPA', 1, 'CPA_Q7'],
+                questionAuthor: 'CPA',
+                questionID: 'CPA_Q7',
+                questionContent: 'Which financial records are currently available?',
+                questionContentInnerText: 'Which financial records are currently available?',
+                questionType: 'questionTypeDiv_modal',
+                questionTypeDiv_modal: true,
+                questionAnswerList: [
+                    { text: 'Income Tax Returns (Corporate / Personal)', questionAnswerDescription: 'Income Tax Returns (Corporate / Personal)', explanationRequired: false, display: true },
+                    { text: 'Audited / Reviewed Financial Statements', questionAnswerDescription: 'Audited / Reviewed Financial Statements', explanationRequired: false, display: true },
+                    { text: 'General Ledger / Trial Balance', questionAnswerDescription: 'General Ledger / Trial Balance', explanationRequired: false, display: true },
+                    { text: 'Bank Statements', questionAnswerDescription: 'Bank Statements', explanationRequired: false, display: true },
+                    { text: 'Contracts / Agreements', questionAnswerDescription: 'Contracts / Agreements', explanationRequired: false, display: true },
+                    { text: 'Payroll Records', questionAnswerDescription: 'Payroll Records', explanationRequired: false, display: true },
+                    { text: 'None Available Yet', questionAnswerDescription: 'None Available Yet', explanationRequired: false, display: true }
+                ],
+                trueAnswerList: ['Income Tax Returns (Corporate / Personal)','Audited / Reviewed Financial Statements','General Ledger / Trial Balance','Bank Statements','Contracts / Agreements','Payroll Records','None Available Yet'],
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ['questionStore', 1, 'CPA', 1, 'CPA_Q8'],
+                questionAuthor: 'CPA',
+                questionID: 'CPA_Q8',
+                questionContent: 'Is there an existing report or expert opinion from a prior CPA?',
+                questionContentInnerText: 'Is there an existing report or expert opinion from a prior CPA?',
+                questionType: 'questionTypeDiv_checkbox',
+                questionTypeDiv_checkbox: true,
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ['questionStore', 1, 'CPA', 1, 'CPA_Q9'],
+                questionAuthor: 'CPA',
+                questionID: 'CPA_Q9',
+                questionContent: 'Scheduled trial or hearing date (if known).',
+                questionContentInnerText: 'Scheduled trial or hearing date (if known).',
+                questionType: 'questionTypeDiv_date',
+                questionTypeDiv_date: true,
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ['questionStore', 1, 'CPA', 1, 'CPA_Q10'],
+                questionAuthor: 'CPA',
+                questionID: 'CPA_Q10',
+                questionContent: 'Your contact email address.',
+                questionContentInnerText: 'Your contact email address.',
+                questionType: 'questionTypeDiv_email',
+                questionTypeDiv_email: true,
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            },
+            {
+                keyPathValue: ['questionStore', 1, 'CPA', 1, 'CPA_Q11'],
+                questionAuthor: 'CPA',
+                questionID: 'CPA_Q11',
+                questionContent: 'Your contact phone number.',
+                questionContentInnerText: 'Your contact phone number.',
+                questionType: 'questionTypeDiv_tel',
+                questionTypeDiv_tel: true,
+                versionDateSince1969: Date.now(),
+                localTimeString: new Date().toString()
+            }
+        ];
+
+        const cpaQuestionRows = cpaLitigationQuestions.map((q, idx) => ({
+            sortPosition: idx + 1,
+            questionAuthor: q.questionAuthor,
+            questionID: q.questionID,
+            rowStatus: 'published',
+            ruleRef: null
+        }));
+
+        const cpaLitigationQuestionnaire = {
+            keyPathValue: ['questionnaireStore', 1, 'CPA', 1, 'CPA_QNNR_001'],
+            questionnaireAuthor: 'CPA',
+            questionnaireID: 'CPA_QNNR_001',
+            questionnaireContent: 'CPA/CA Litigation Support Specialist Intake',
+            questionnaireRow: cpaLitigationQuestions.map(q => `${q.questionAuthor}/${q.questionID}`),
+            questionAnswerChoices: cpaQuestionRows,
+            rowStatus: 'published',
+            versionDateSince1969: Date.now(),
+            localTimeString: new Date().toString()
+        };
+
+        const cpaAuthorMetadata = {
+            authorName: 'CPA',
+            fullName: 'CPA/CA Litigation Support Specialist',
+            email: 'litigation@cpafirm.example',
+            createdAt: Date.now()
+        };
+
         async function createTestData() {
             if (!confirm('This will CLEAR all existing data and create fresh test data.\n\nContinue?')) {
                 return;
@@ -458,6 +959,147 @@
                 if (showConfirm) {
                     showAlert('❌ Error: ' + error.message, 'danger');
                 }
+            }
+        }
+
+        async function seedSampleQuestionnaire() {
+            if (!confirm('This will add/update a sample questionnaire and sample questions for survey testing.\n\nContinue?')) {
+                return;
+            }
+
+            try {
+                showAlert('Seeding sample questionnaire...', 'info');
+                const db = await openDB();
+                const tx = db.transaction(['questionStore', 'questionnaireStore', 'authorMetadata'], 'readwrite');
+                const questionStore = tx.objectStore('questionStore');
+                const questionnaireStore = tx.objectStore('questionnaireStore');
+                const authorStore = tx.objectStore('authorMetadata');
+
+                for (const q of sampleSurveyQuestions) {
+                    await new Promise((resolve, reject) => {
+                        const request = questionStore.put(q);
+                        request.onsuccess = () => resolve();
+                        request.onerror = () => reject(request.error);
+                    });
+                }
+
+                await new Promise((resolve, reject) => {
+                    const request = questionnaireStore.put(sampleSurveyQuestionnaire);
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+
+                await new Promise((resolve, reject) => {
+                    const request = authorStore.put(sampleAuthorMetadata);
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+
+                await new Promise((resolve, reject) => {
+                    tx.oncomplete = () => resolve();
+                    tx.onerror = () => reject(tx.error || new Error('Transaction failed'));
+                    tx.onabort = () => reject(tx.error || new Error('Transaction aborted'));
+                });
+
+                db.close();
+                showAlert('✅ Sample questionnaire seeded. Open agent/index.html and click Refresh to test Begin Survey.', 'success');
+            } catch (error) {
+                console.error('Error seeding sample questionnaire:', error);
+                showAlert('❌ Failed to seed sample questionnaire: ' + error.message, 'danger');
+            }
+        }
+
+        async function seedLawyersQuestionnaire() {
+            if (!confirm('This will add/update a Lawyers survey questionnaire and related questions for testing.\n\nContinue?')) {
+                return;
+            }
+
+            try {
+                showAlert('Seeding Lawyers survey questionnaire...', 'info');
+                const db = await openDB();
+                const tx = db.transaction(['questionStore', 'questionnaireStore', 'authorMetadata'], 'readwrite');
+                const questionStore = tx.objectStore('questionStore');
+                const questionnaireStore = tx.objectStore('questionnaireStore');
+                const authorStore = tx.objectStore('authorMetadata');
+
+                for (const q of lawyersSurveyQuestions) {
+                    await new Promise((resolve, reject) => {
+                        const request = questionStore.put(q);
+                        request.onsuccess = () => resolve();
+                        request.onerror = () => reject(request.error);
+                    });
+                }
+
+                await new Promise((resolve, reject) => {
+                    const request = questionnaireStore.put(lawyersSurveyQuestionnaire);
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+
+                await new Promise((resolve, reject) => {
+                    const request = authorStore.put(lawyersAuthorMetadata);
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+
+                await new Promise((resolve, reject) => {
+                    tx.oncomplete = () => resolve();
+                    tx.onerror = () => reject(tx.error || new Error('Transaction failed'));
+                    tx.onabort = () => reject(tx.error || new Error('Transaction aborted'));
+                });
+
+                db.close();
+                showAlert('✅ Lawyers survey seeded. Open agent/index.html and click Refresh to test.', 'success');
+            } catch (error) {
+                console.error('Error seeding lawyers questionnaire:', error);
+                showAlert('❌ Failed to seed lawyers questionnaire: ' + error.message, 'danger');
+            }
+        }
+
+        async function seedCPAQuestionnaire() {
+            if (!confirm('This will add/update the CPA/CA Litigation Support Specialist questionnaire and related questions for testing.\n\nContinue?')) {
+                return;
+            }
+
+            try {
+                showAlert('Seeding CPA litigation questionnaire...', 'info');
+                const db = await openDB();
+                const tx = db.transaction(['questionStore', 'questionnaireStore', 'authorMetadata'], 'readwrite');
+                const questionStore = tx.objectStore('questionStore');
+                const questionnaireStore = tx.objectStore('questionnaireStore');
+                const authorStore = tx.objectStore('authorMetadata');
+
+                for (const q of cpaLitigationQuestions) {
+                    await new Promise((resolve, reject) => {
+                        const request = questionStore.put(q);
+                        request.onsuccess = () => resolve();
+                        request.onerror = () => reject(request.error);
+                    });
+                }
+
+                await new Promise((resolve, reject) => {
+                    const request = questionnaireStore.put(cpaLitigationQuestionnaire);
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+
+                await new Promise((resolve, reject) => {
+                    const request = authorStore.put(cpaAuthorMetadata);
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+
+                await new Promise((resolve, reject) => {
+                    tx.oncomplete = () => resolve();
+                    tx.onerror = () => reject(tx.error || new Error('Transaction failed'));
+                    tx.onabort = () => reject(tx.error || new Error('Transaction aborted'));
+                });
+
+                db.close();
+                showAlert('✅ CPA Litigation Support questionnaire seeded. Open agent/index.html and click Refresh to test.', 'success');
+            } catch (error) {
+                console.error('Error seeding CPA questionnaire:', error);
+                showAlert('❌ Failed to seed CPA questionnaire: ' + error.message, 'danger');
             }
         }
 

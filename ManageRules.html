@@ -204,6 +204,24 @@
     <script>
         let allRules = [];
 
+        function getRuleType(rule) {
+            return rule?.keyPathValue?.[0] || '';
+        }
+
+        function getRuleAuthor(rule) {
+            if (rule?.ruleAuthor) return rule.ruleAuthor;
+            if (rule?.groupruleAuthor) return rule.groupruleAuthor;
+            // Support both key formats: [type, author, id] and [type, 1, author, 1, id]
+            return rule?.keyPathValue?.[2] || rule?.keyPathValue?.[1] || 'Unknown';
+        }
+
+        function getRuleId(rule) {
+            if (rule?.ruleID) return rule.ruleID;
+            if (rule?.groupruleID) return rule.groupruleID;
+            // Support both key formats: [type, author, id] and [type, 1, author, 1, id]
+            return rule?.keyPathValue?.[4] || rule?.keyPathValue?.[2] || 'Unknown';
+        }
+
         // Load rules when page loads
         document.addEventListener('DOMContentLoaded', function() {
             console.log("ManageRules.html loaded, initializing...");
@@ -268,18 +286,24 @@
                     allRules = getAllRequest.result || [];
                     console.log(`✓ Loaded ${allRules.length} total records from database`);
                     
-                    // Filter to show ONLY display rules (trueruleStore), exclude collections
-                    allRules = allRules.filter(rule => rule.keyPathValue && rule.keyPathValue[0] === 'trueruleStore');
-                    console.log(`✓ Filtered to ${allRules.length} display rules only`);
+                    // Keep both display rules and collections for this manager.
+                    allRules = allRules.filter(rule => {
+                        const type = getRuleType(rule);
+                        return type === 'trueruleStore' || type === 'groupruleStore';
+                    });
+
+                    const displayRuleCount = allRules.filter(rule => getRuleType(rule) === 'trueruleStore').length;
+                    const collectionCount = allRules.filter(rule => getRuleType(rule) === 'groupruleStore').length;
+                    console.log(`✓ Loaded ${displayRuleCount} display rules and ${collectionCount} collections`);
                     
                     // Debug: Show detailed info about each rule
                     if (allRules.length > 0) {
                         console.log("=== DISPLAY RULES IN DATABASE ===");
                         allRules.forEach((rule, index) => {
                             console.log(`Rule ${index + 1}:`, {
-                                type: rule.keyPathValue[0],
-                                author: rule.keyPathValue[1],
-                                id: rule.keyPathValue[2],
+                                type: getRuleType(rule),
+                                author: getRuleAuthor(rule),
+                                id: getRuleId(rule),
                                 content: rule.ruleContent
                             });
                         });
@@ -342,14 +366,18 @@
             emptyState.classList.add('hidealways');
             
             // Extract unique authors for debugging
-            const authors = [...new Set(rules.map(r => r.keyPathValue[1]))];
+            const authors = [...new Set(rules.map(getRuleAuthor))];
+            const displayCount = rules.filter(rule => getRuleType(rule) === 'trueruleStore').length;
+            const collectionCount = rules.filter(rule => getRuleType(rule) === 'groupruleStore').length;
             console.log("Available authors:", authors);
             
             // Show summary at top
             const summary = document.createElement('div');
             summary.style.cssText = 'background: #e7f3ff; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;';
             summary.innerHTML = `
-                <strong>📊 Summary:</strong> ${rules.length} rule(s) found | 
+                <strong>📊 Summary:</strong> ${rules.length} total | 
+                <strong>Display Rules:</strong> ${displayCount} | 
+                <strong>Collections:</strong> ${collectionCount} |
                 <strong>Authors:</strong> ${authors.join(', ')}
             `;
             container.appendChild(summary);
@@ -362,13 +390,14 @@
 
         function createRuleCard(rule) {
             const div = document.createElement('div');
-            const isGroupRule = rule.keyPathValue[0] === 'groupruleStore';
-            const isDisplayRule = rule.keyPathValue[0] === 'trueruleStore';
+            const type = getRuleType(rule);
+            const isGroupRule = type === 'groupruleStore';
+            const isDisplayRule = type === 'trueruleStore';
             
             div.className = `rule-card ${isGroupRule ? 'group-rule' : 'display-rule'}`;
             
-            const author = rule.keyPathValue[1] || 'Unknown';
-            const id = rule.keyPathValue[2] || 'Unknown';
+            const author = getRuleAuthor(rule);
+            const id = getRuleId(rule);
             const content = isGroupRule ? (rule.groupruleContent || 'No title') : (rule.ruleContent || 'No description');
             const type = isGroupRule ? 'Rule Collection' : 'Display Rule';
             const badgeClass = isGroupRule ? 'badge-group' : 'badge-display';
@@ -388,8 +417,8 @@
                 logicInfo = `<div class="rule-meta">📊 Logic: ${logicText} | Contains: ${numRules} rule(s)</div>`;
             }
             
-            const ruleID = rule.ruleID || id;
-            const ruleAuthor = rule.ruleAuthor || author;
+            const ruleID = rule.ruleID || rule.groupruleID || id;
+            const ruleAuthor = rule.ruleAuthor || rule.groupruleAuthor || author;
             
             div.innerHTML = `
                 <div class="rule-header">
@@ -444,20 +473,20 @@
                 console.log("Checking rule:", rule.keyPathValue);
                 
                 // Type filter
-                if (typeFilter === 'display' && rule.keyPathValue[0] !== 'trueruleStore') {
+                if (typeFilter === 'display' && getRuleType(rule) !== 'trueruleStore') {
                     console.log("  -> Filtered out by type (not display rule)");
                     return false;
                 }
-                if (typeFilter === 'collection' && rule.keyPathValue[0] !== 'groupruleStore') {
+                if (typeFilter === 'collection' && getRuleType(rule) !== 'groupruleStore') {
                     console.log("  -> Filtered out by type (not collection)");
                     return false;
                 }
                 
                 // Search filter
                 if (searchTerm) {
-                    const author = (rule.keyPathValue[2] || '').toLowerCase();
-                    const id = (rule.keyPathValue[4] || '').toLowerCase();
-                    const content = rule.keyPathValue[0] === 'groupruleStore' 
+                    const author = String(getRuleAuthor(rule) || '').toLowerCase();
+                    const id = String(getRuleId(rule) || '').toLowerCase();
+                    const content = getRuleType(rule) === 'groupruleStore'
                         ? (rule.groupruleContent || '').toLowerCase()
                         : (rule.ruleContent || '').toLowerCase();
                     
